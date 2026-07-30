@@ -27,7 +27,7 @@ download_file() {
         return
     fi
     log "Downloading: $url"
-    curl -L -o "$output" "$url" --progress-bar
+    curl -fsSL -o "$output" "$url"
 }
 
 extract_file() {
@@ -82,6 +82,9 @@ elif [ "$PLATFORM" = "windows" ]; then
 
     # PHP 8.2 NTS (NTS = Non-Thread Safe, for CLI/FPM)
     log "--- PHP 8.2 ---"
+    download_file \
+        "https://windows.php.net/downloads/releases/archives/php-8.2.28-nts-Win32-vs16-x64.zip" \
+        "$BIN_DIR/php-win-x64.zip" || \
     download_file \
         "https://windows.php.net/downloads/releases/php-8.2.28-nts-Win32-vs16-x64.zip" \
         "$BIN_DIR/php-win-x64.zip"
