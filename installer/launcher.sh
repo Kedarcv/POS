@@ -17,7 +17,8 @@ else
     INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 fi
 
-DATA_DIR="$INSTALL_DIR/data"
+# Writable user data directory (DB, logs, sessions, pids)
+DATA_DIR="$HOME/.beamlink-pos"
 LOG_DIR="$DATA_DIR/logs"
 PID_DIR="$DATA_DIR/pids"
 MARIADB_DIR="$INSTALL_DIR/mariadb"
