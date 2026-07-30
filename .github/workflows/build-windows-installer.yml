@@ -42,11 +42,14 @@ jobs:
           chmod +x download-binaries.sh
           ./download-binaries.sh windows
 
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+
       - name: Build Windows Installer with NSIS
         shell: cmd
         run: |
           cd installer
-          makensis windows-installer.nsi
+          "C:\Program Files (x86)\NSIS\makensis.exe" windows-installer.nsi
 
       - name: Upload Windows Installer Artifact
         uses: actions/upload-artifact@v4
