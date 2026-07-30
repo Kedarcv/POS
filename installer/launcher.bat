@@ -119,6 +119,9 @@ if not exist "%INSTALL_DIR%.env" (
     echo extension=mbstring
     echo extension=curl
     echo extension=openssl
+    echo extension=intl
+    echo extension=fileinfo
+    echo extension=bcmath
 ) > "%DATA_DIR%\php.ini"
 
 :: Start PHP

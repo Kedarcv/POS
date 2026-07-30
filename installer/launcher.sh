@@ -257,6 +257,9 @@ extension=zip
 extension=mbstring
 extension=curl
 extension=openssl
+extension=intl
+extension=fileinfo
+extension=bcmath
 EOF
 
 # Start PHP built-in server
