@@ -42,15 +42,16 @@ mkdir -p "$APP_DIR/Contents/Resources/php"
 cp -R "$INSTALL_DIR/bin/php-mac-arm64/"* "$APP_DIR/Contents/Resources/php/"
 chmod +x "$APP_DIR/Contents/Resources/php/php" 2>/dev/null || true
 
-# MariaDB
-if [ ! -d "$INSTALL_DIR/bin/mariadb-mac-arm64" ]; then
+# MySQL
+if [ ! -d "$INSTALL_DIR/bin/mysql-mac-arm64" ]; then
     error "Run ./download-binaries.sh mac first!"
 fi
-log "Copying MariaDB..."
-cp -R "$INSTALL_DIR/bin/mariadb-mac-arm64" "$APP_DIR/Contents/Resources/mariadb"
-chmod +x "$APP_DIR/Contents/Resources/mariadb/bin/mariadbd" 2>/dev/null || true
-chmod +x "$APP_DIR/Contents/Resources/mariadb/bin/mariadb" 2>/dev/null || true
-chmod +x "$APP_DIR/Contents/Resources/mariadb/bin/mariadb-install-db" 2>/dev/null || true
+log "Copying MySQL..."
+cp -R "$INSTALL_DIR/bin/mysql-mac-arm64" "$APP_DIR/Contents/Resources/mysql"
+chmod +x "$APP_DIR/Contents/Resources/mysql/bin/mysqld" 2>/dev/null || true
+chmod +x "$APP_DIR/Contents/Resources/mysql/bin/mysql" 2>/dev/null || true
+chmod +x "$APP_DIR/Contents/Resources/mysql/bin/mysqld_safe" 2>/dev/null || true
+chmod +x "$APP_DIR/Contents/Resources/mysql/bin/mysqladmin" 2>/dev/null || true
 
 # Caddy
 if [ ! -d "$INSTALL_DIR/bin/caddy-mac-arm64" ]; then

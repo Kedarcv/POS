@@ -1,6 +1,6 @@
 #!/bin/bash
 # BeamLink POS - macOS Launcher
-# Starts MariaDB, PHP, and Caddy, then opens the browser
+# Starts MySQL, PHP, and Caddy, then opens the browser
 # Works for both direct install and .app bundle
 
 set -e
@@ -21,8 +21,8 @@ fi
 DATA_DIR="$HOME/.beamlink-pos"
 LOG_DIR="$DATA_DIR/logs"
 PID_DIR="$DATA_DIR/pids"
-MARIADB_DIR="$INSTALL_DIR/mariadb"
-MARIADB_BIN="$MARIADB_DIR/bin"
+MYSQL_DIR="$INSTALL_DIR/mysql"
+MYSQL_BIN="$MYSQL_DIR/bin"
 PHP_DIR="$INSTALL_DIR/php"
 CADDY_DIR="$INSTALL_DIR/caddy"
 APP_DIR="$INSTALL_DIR/app"
@@ -43,8 +43,8 @@ mkdir -p "$DATA_DIR" "$LOG_DIR" "$PID_DIR" "$DATA_DIR/sessions" "$DATA_DIR/stock
 
 # Check if already running
 check_running() {
-    if [ -f "$PID_DIR/mariadb.pid" ]; then
-        pid=$(cat "$PID_DIR/mariadb.pid")
+    if [ -f "$PID_DIR/mysql.pid" ]; then
+        pid=$(cat "$PID_DIR/mysql.pid")
         if kill -0 "$pid" 2>/dev/null; then
             return 0
         fi
@@ -75,29 +75,30 @@ stop_all() {
         wait "$pid" 2>/dev/null || true
         rm -f "$PID_DIR/php.pid"
     fi
-    # Kill MariaDB
-    if [ -f "$PID_DIR/mariadb.pid" ]; then
-        pid=$(cat "$PID_DIR/mariadb.pid")
+    # Kill MySQL
+    if [ -f "$PID_DIR/mysql.pid" ]; then
+        pid=$(cat "$PID_DIR/mysql.pid")
         kill "$pid" 2>/dev/null || true
         wait "$pid" 2>/dev/null || true
-        rm -f "$PID_DIR/mariadb.pid"
+        rm -f "$PID_DIR/mysql.pid"
     fi
 }
 
 trap stop_all EXIT INT TERM
 
 # ============================================
-# MARIADB
+# MYSQL
 # ============================================
 
-# Initialize MariaDB if needed
+# Initialize MySQL if needed
 if [ ! -d "$DATA_DIR/db" ] || [ ! -f "$DATA_DIR/db/ibdata1" ]; then
     log "Initializing database..."
     mkdir -p "$DATA_DIR/db"
-    "$MARIADB_BIN/mariadb-install-db" \
+    "$MYSQL_BIN/mysqld" \
+        --initialize-insecure \
         --datadir="$DATA_DIR/db" \
         --user="$(whoami)" \
-        --basedir="$MARIADB_DIR" \
+        --basedir="$MYSQL_DIR" \
         > "$LOG_DIR/install_db.log" 2>&1 || true
     log "Database initialized."
 fi
@@ -113,9 +114,9 @@ DB_PASS=$(cat "$DATA_DIR/.db_pass")
 cat > "$DATA_DIR/my.cnf" << EOF
 [mysqld]
 port=3307
-basedir=$MARIADB_DIR
+basedir=$MYSQL_DIR
 datadir=$DATA_DIR/db
-socket=$DATA_DIR/mariadb.sock
+socket=$DATA_DIR/mysql.sock
 skip-name-resolve
 innodb_buffer_pool_size=64M
 innodb_log_file_size=8M
@@ -123,39 +124,40 @@ max_allowed_packet=64M
 character-set-server=utf8mb4
 collation-server=utf8mb4_general_ci
 bind-address=127.0.0.1
+mysqlx=OFF
 
 [client]
 port=3307
-socket=$DATA_DIR/mariadb.sock
+socket=$DATA_DIR/mysql.sock
 default-character-set=utf8mb4
 EOF
 
-# Start MariaDB
-log "Starting MariaDB on port 3307..."
-"$MARIADB_BIN/mariadbd" \
+# Start MySQL
+log "Starting MySQL on port 3307..."
+"$MYSQL_BIN/mysqld" \
     --defaults-file="$DATA_DIR/my.cnf" \
     --console &
-MARIADB_PID=$!
-echo $MARIADB_PID > "$PID_DIR/mariadb.pid"
+MYSQL_PID=$!
+echo $MYSQL_PID > "$PID_DIR/mysql.pid"
 
-# Wait for MariaDB
-log "Waiting for MariaDB..."
+# Wait for MySQL
+log "Waiting for MySQL..."
 for i in {1..30}; do
-    if "$MARIADB_BIN/mariadb" \
-        --socket="$DATA_DIR/mariadb.sock" \
+    if "$MYSQL_BIN/mysql" \
+        --socket="$DATA_DIR/mysql.sock" \
         -u root \
         -e "SELECT 1" > /dev/null 2>&1; then
         break
     fi
     if [ $i -eq 30 ]; then
-        error "MariaDB failed to start. Check logs: $LOG_DIR/"
+        error "MySQL failed to start. Check logs: $LOG_DIR/"
     fi
     sleep 1
 done
 
 # Create user and database
-"$MARIADB_BIN/mariadb" \
-    --socket="$DATA_DIR/mariadb.sock" \
+"$MYSQL_BIN/mysql" \
+    --socket="$DATA_DIR/mysql.sock" \
     -u root << EOSQL
 CREATE DATABASE IF NOT EXISTS beamlink_pos CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 CREATE USER IF NOT EXISTS 'beamlink'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';
@@ -165,7 +167,7 @@ GRANT ALL PRIVILEGES ON beamlink_pos.* TO 'beamlink'@'localhost';
 FLUSH PRIVILEGES;
 EOSQL
 
-log "MariaDB ready."
+log "MySQL ready."
 
 # ============================================
 # .env FILE

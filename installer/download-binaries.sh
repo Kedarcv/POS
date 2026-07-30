@@ -64,50 +64,48 @@ if [ "$PLATFORM" = "mac" ]; then
     chmod +x "$BIN_DIR/caddy-mac-arm64/caddy" 2>/dev/null || true
     rm -f "$BIN_DIR/caddy-mac-arm64.tar.gz"
 
-    # MariaDB - copy from Homebrew (no official macOS arm64 tarball available)
-    log "--- MariaDB ---"
-    if [ ! -f "$BIN_DIR/mariadb-mac-arm64/bin/mariadbd" ] || [ ! -s "$BIN_DIR/mariadb-mac-arm64/bin/mariadbd" ]; then
-        rm -rf "$BIN_DIR/mariadb-mac-arm64"
-        BREW_MARIADB="$(brew --prefix mariadb 2>/dev/null || echo "")"
-        if [ -z "$BREW_MARIADB" ] || [ ! -d "$BREW_MARIADB" ]; then
-            log "Installing MariaDB via Homebrew..."
-            brew install mariadb
-            BREW_MARIADB="$(brew --prefix mariadb)"
+    # MySQL Community Server - copy from Homebrew (no official macOS arm64 tarball available)
+    log "--- MySQL ---"
+    if [ ! -f "$BIN_DIR/mysql-mac-arm64/bin/mysqld" ] || [ ! -s "$BIN_DIR/mysql-mac-arm64/bin/mysqld" ]; then
+        rm -rf "$BIN_DIR/mysql-mac-arm64"
+        BREW_MYSQL="$(brew --prefix mysql 2>/dev/null || echo "")"
+        if [ -z "$BREW_MYSQL" ] || [ ! -d "$BREW_MYSQL" ]; then
+            log "Installing MySQL via Homebrew..."
+            brew install mysql
+            BREW_MYSQL="$(brew --prefix mysql)"
         fi
-        log "Copying MariaDB from Homebrew: $BREW_MARIADB"
-        mkdir -p "$BIN_DIR/mariadb-mac-arm64/bin"
-        mkdir -p "$BIN_DIR/mariadb-mac-arm64/share"
-        mkdir -p "$BIN_DIR/mariadb-mac-arm64/lib"
+        log "Copying MySQL from Homebrew: $BREW_MYSQL"
+        mkdir -p "$BIN_DIR/mysql-mac-arm64/bin"
+        mkdir -p "$BIN_DIR/mysql-mac-arm64/share"
+        mkdir -p "$BIN_DIR/mysql-mac-arm64/lib"
         # Copy essential binaries
-        for bin in mariadbd mariadb mariadb-install-db mariadbd-safe mysql_install_db; do
-            if [ -f "$BREW_MARIADB/bin/$bin" ]; then
-                cp "$BREW_MARIADB/bin/$bin" "$BIN_DIR/mariadb-mac-arm64/bin/"
-                chmod +x "$BIN_DIR/mariadb-mac-arm64/bin/$bin"
+        for bin in mysqld mysql mysqld_safe mysql_install_db mysqladmin; do
+            if [ -f "$BREW_MYSQL/bin/$bin" ]; then
+                cp "$BREW_MYSQL/bin/$bin" "$BIN_DIR/mysql-mac-arm64/bin/"
+                chmod +x "$BIN_DIR/mysql-mac-arm64/bin/$bin"
             fi
         done
-        # Copy share (needed for mysql_install_db / mariadb-install-db)
-        if [ -d "$BREW_MARIADB/share/mariadb" ]; then
-            cp -R "$BREW_MARIADB/share/mariadb" "$BIN_DIR/mariadb-mac-arm64/share/"
-        elif [ -d "$BREW_MARIADB/share/mysql" ]; then
-            cp -R "$BREW_MARIADB/share/mysql" "$BIN_DIR/mariadb-mac-arm64/share/mariadb"
+        # Copy share (needed for mysql_install_db initialization)
+        if [ -d "$BREW_MYSQL/share/mysql" ]; then
+            cp -R "$BREW_MYSQL/share/mysql" "$BIN_DIR/mysql-mac-arm64/share/"
         fi
         # Copy required libraries
-        if [ -d "$BREW_MARIADB/lib" ]; then
-            cp -R "$BREW_MARIADB/lib/"*.dylib "$BIN_DIR/mariadb-mac-arm64/lib/" 2>/dev/null || true
+        if [ -d "$BREW_MYSQL/lib" ]; then
+            cp -R "$BREW_MYSQL/lib/"*.dylib "$BIN_DIR/mysql-mac-arm64/lib/" 2>/dev/null || true
         fi
-        # Copy plugin directory
-        if [ -d "$BREW_MARIADB/lib/plugin" ]; then
-            cp -R "$BREW_MARIADB/lib/plugin" "$BIN_DIR/mariadb-mac-arm64/lib/"
+        # Copy plugin directory (auth plugins etc.)
+        if [ -d "$BREW_MYSQL/lib/plugin" ]; then
+            cp -R "$BREW_MYSQL/lib/plugin" "$BIN_DIR/mysql-mac-arm64/lib/"
         fi
-        log "MariaDB binaries copied successfully."
+        log "MySQL binaries copied successfully."
     else
-        log "Already exists: $BIN_DIR/mariadb-mac-arm64/bin/mariadbd"
+        log "Already exists: $BIN_DIR/mysql-mac-arm64/bin/mysqld"
     fi
 
     log "=== macOS arm64 binaries downloaded ==="
     log "PHP:  $BIN_DIR/php-mac-arm64/php"
     log "Caddy: $BIN_DIR/caddy-mac-arm64/caddy"
-    log "MariaDB: $BIN_DIR/mariadb-mac-arm64/"
+    log "MySQL: $BIN_DIR/mysql-mac-arm64/"
 
 elif [ "$PLATFORM" = "windows" ]; then
     log "=== Downloading Windows x64 binaries ==="
