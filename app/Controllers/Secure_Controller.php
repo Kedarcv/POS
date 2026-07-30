@@ -46,7 +46,8 @@ class Secure_Controller extends BaseController
 
         $logged_in_employee_info = $this->employee->get_logged_in_employee_info();
         if (
-            !$this->employee->has_module_grant($module_id, $logged_in_employee_info->person_id)
+            ! is_object($logged_in_employee_info)
+            || !$this->employee->has_module_grant($module_id, $logged_in_employee_info->person_id)
             || (isset($submodule_id) && !$this->employee->has_module_grant($submodule_id, $logged_in_employee_info->person_id))
         ) {
             header("Location:" . base_url("no_access/$module_id/$submodule_id"));

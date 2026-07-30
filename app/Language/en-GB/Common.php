@@ -74,7 +74,7 @@ return [
     "search_options"                 => "Search options",
     "searched_for"                   => "Searched for",
     "software_short"                 => "OSPOS",
-    "software_title"                 => "Open Source Point of Sale",
+    "software_title"                 => "BeamLink Point of Sale ",
     "state"                          => "County",
     "submit"                         => "Submit",
     "total_spent"                    => "Total Spent",

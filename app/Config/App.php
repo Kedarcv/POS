@@ -8,7 +8,7 @@ use CodeIgniter\Session\Handlers\DatabaseHandler;
 class App extends BaseConfig
 {
     /**
-     * This is the code version of the Open Source Point of Sale you're running.
+     * This is the code version of the BeamLink Point of Sale  you're running.
      *
      * @var string
      */
@@ -300,7 +300,17 @@ class App extends BaseConfig
 
         $host = $this->getValidHost();
         $this->baseURL = $this->https_on ? 'https' : 'http';
-        $this->baseURL .= '://' . $host . '/';
+        $this->baseURL .= '://' . $host;
+
+        // Preserve non-standard port from HTTP_HOST
+        $httpHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $port = parse_url('http://' . $httpHost, PHP_URL_PORT);
+        $defaultPort = $this->https_on ? 443 : 80;
+        if ($port !== null && $port !== $defaultPort) {
+            $this->baseURL .= ':' . $port;
+        }
+
+        $this->baseURL .= '/';
         $this->baseURL .= str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
     }
 

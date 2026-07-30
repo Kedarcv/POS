@@ -74,7 +74,7 @@ return [
     "search_options"                 => "Opciones de búsqueda",
     "searched_for"                   => "Buscado por",
     "software_short"                 => "OSPOS",
-    "software_title"                 => "Punto de Venta de Código Abierto (Open Source Point of Sale)",
+    "software_title"                 => "Punto de Venta de Código Abierto (BeamLink Point of Sale )",
     "state"                          => "Estado",
     "submit"                         => "Enviar",
     "total_spent"                    => "Total Gastado",
@@ -86,4 +86,6 @@ return [
     "yes"                            => "Si",
     "you_are_using_ospos"            => "Está utilizando la versión de Código Abierto de Punto de Venta",
     "zip"                            => "CP",
+    "save" => "",
+    "cancel" => "",
 ];

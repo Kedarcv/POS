@@ -10,7 +10,7 @@ return [
     "phone"                 => "Namba ya Simu",
     "phone_number_required" => "Namba ya simu inahitajika",
     "phone_placeholder"     => "Namba ya Simu hapa...",
-    "sms_send"              => "Tuma ujumbe mfupi wa maneno",
+    "sms_send"            => "",
     "successfully_sent"     => "Ujumbe umetumwa kwa mafanikio kwa: ",
     "unsuccessfully_sent"   => "Ujumbe umetumwa bila mafanikio kwa: ",
 ];

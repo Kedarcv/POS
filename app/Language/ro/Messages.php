@@ -10,7 +10,7 @@ return [
     "phone"                 => "",
     "phone_number_required" => "",
     "phone_placeholder"     => "",
-    "sms_send"              => "",
+    "sms_send"            => "",
     "successfully_sent"     => "",
     "unsuccessfully_sent"   => "",
 ];

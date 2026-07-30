@@ -1,0 +1,56 @@
+name: Build Windows Installer Package
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows-installer:
+    name: Build Windows Desktop Installer (.exe)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, pdo_mysql, gd, zip, mbstring, curl, openssl
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install PHP Dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Install Node Dependencies & Build Assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Download Bundled Binaries (PHP, MariaDB, Caddy)
+        shell: bash
+        run: |
+          cd installer
+          chmod +x download-binaries.sh
+          ./download-binaries.sh windows
+
+      - name: Build Windows Installer with NSIS
+        shell: cmd
+        run: |
+          cd installer
+          makensis windows-installer.nsi
+
+      - name: Upload Windows Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BeamLink-POS-Windows-Installer
+          path: installer/BeamLink-POS-*-windows-x64.exe
+          if-no-files-found: error

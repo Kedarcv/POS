@@ -12,53 +12,23 @@
             <ul id="message_error_message_box" class="error_message_box"></ul>
 
             <div class="form-group form-group-sm">
-                <?= form_label(lang('Config.msg_uid'), 'msg_uid', ['class' => 'control-label col-xs-2 required']) ?>
-                <div class="col-xs-4">
-                    <div class="input-group">
-                        <span class="input-group-addon input-sm">
-                            <span class="glyphicon glyphicon-user"></span>
-                        </span>
-                        <?= form_input([
-                            'name'  => 'msg_uid',
-                            'id'    => 'msg_uid',
-                            'class' => 'form-control input-sm required',
-                            'value' => $config['msg_uid']
-                        ]) ?>
-                    </div>
+                <label class="col-xs-2 control-label">
+                    <span style="color: #25d366;">&#128172;</span> WhatsApp Config
+                </label>
+                <div class="col-xs-10">
+                    <p class="form-control-static text-muted" style="font-size: 12px;">
+                        WhatsApp messages are sent via your bot number using the Cloud API.
+                        Credentials are configured in <code>.env</code> — see below for the saved message template.
+                    </p>
                 </div>
             </div>
 
             <div class="form-group form-group-sm">
-                <?= form_label(lang('Config.msg_pwd'), 'msg_pwd', ['class' => 'control-label col-xs-2 required']) ?>
+                <label class="col-xs-2 control-label">Bot Number</label>
                 <div class="col-xs-4">
-                    <div class="input-group">
-                        <span class="input-group-addon input-sm">
-                            <span class="glyphicon glyphicon-lock"></span>
-                        </span>
-                        <?= form_password([
-                            'name'  => 'msg_pwd',
-                            'id'    => 'msg_pwd',
-                            'class' => 'form-control input-sm required',
-                            'value' => $config['msg_pwd']
-                        ]) ?>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group form-group-sm">
-                <?= form_label(lang('Config.msg_src'), 'msg_src', ['class' => 'control-label col-xs-2 required']) ?>
-                <div class="col-xs-4">
-                    <div class="input-group">
-                        <span class="input-group-addon input-sm">
-                            <span class="glyphicon glyphicon-bullhorn"></span>
-                        </span>
-                        <?= form_input([
-                            'name'  => 'msg_src',
-                            'id'    => 'msg_src',
-                            'class' => 'form-control input-sm required',
-                            'value' => $config['msg_src'] == null ? $config['company'] : $config['msg_src']
-                        ]) ?>
-                    </div>
+                    <p class="form-control-static">
+                        <span class="label label-success"><?= esc(getenv('WHATSAPP_PHONE_NUMBER_ID') ?: 'Not configured') ?></span>
+                    </p>
                 </div>
             </div>
 
@@ -72,6 +42,7 @@
                         'value'       => $config['msg_msg'],
                         'placeholder' => lang('Config.msg_msg_placeholder')
                     ]) ?>
+                    <span class="help-block">Default message template used when sending WhatsApp messages to customers.</span>
                 </div>
             </div>
 
@@ -79,7 +50,7 @@
                 'name'  => 'submit_message',
                 'id'    => 'submit_message',
                 'value' => lang('Common.submit'),
-                'class' => 'btn btn-primary btn-sm pull-right'
+                'class' => 'btn btn-success btn-sm pull-right'
             ]) ?>
 
         </fieldset>
@@ -94,15 +65,7 @@
             errorLabelContainer: "#message_error_message_box",
 
             rules: {
-                msg_uid: "required",
-                msg_pwd: "required",
-                msg_src: "required"
-            },
-
-            messages: {
-                msg_uid: "<?= lang('Config.msg_uid_required') ?>",
-                msg_pwd: "<?= lang('Config.msg_pwd_required') ?>",
-                msg_src: "<?= lang('Config.msg_src_required') ?>"
+                msg_msg: { required: false }
             }
         }));
     });

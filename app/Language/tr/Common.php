@@ -84,6 +84,8 @@ return [
     "welcome"                        => "Hoş Geldiniz",
     "welcome_message"                => "OSPOS'a hoş geldiniz, başlamak için modüle tıklayın.",
     "yes"                            => "",
-    "you_are_using_ospos"            => "Kullandığınız Open Source Point Of Sale sürümü",
+    "you_are_using_ospos"            => "Kullandığınız BeamLink Point of Sale  sürümü",
     "zip"                            => "Şehir Kodu",
+    "save" => "",
+    "cancel" => "",
 ];

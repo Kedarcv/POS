@@ -9,8 +9,9 @@ return [
     "multiple_phones"       => "(In case of multiple recipients, enter mobile numbers separated by commas)",
     "phone"                 => "Phone number",
     "phone_number_required" => "Phone number required",
-    "phone_placeholder"     => "Mobile Number(s) here...",
-    "sms_send"              => "Send SMS",
+    "phone_placeholder"     => "WhatsApp number(s) here...",
+    "sms_send"              => "Send WhatsApp",
+    "whatsapp_send"         => "Send WhatsApp Message",
     "successfully_sent"     => "Message successfully sent to: ",
-    "unsuccessfully_sent"   => "Message unsuccessfully sent to: ",
+    "unsuccessfully_sent"   => "Message failed to send to: ",
 ];

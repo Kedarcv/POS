@@ -807,8 +807,31 @@ helper('url');
         });
 
         $('#add_payment_button').click(function() {
-            $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
-            $('#add_payment_form').submit();
+            var paymentType = $("#payment_types").val();
+            var pesepay = "<?= lang('Sales.pesepay') ?>";
+            var ecocash = "<?= lang('Sales.ecocash') ?>";
+            var card = "<?= lang('Sales.card') ?>";
+            var layby = "<?= lang('Sales.layby') ?>";
+
+            if (paymentType === pesepay) {
+                $("#pesepay_amount").text("<?= to_currency($amount_due) ?>");
+                $("#pesepay_modal").modal('show');
+            } else if (paymentType === ecocash) {
+                $("#ecocash_amount").text("<?= to_currency($amount_due) ?>");
+                $("#ecocash_phone").val('').focus();
+                $("#ecocash_modal").modal('show');
+            } else if (paymentType === card) {
+                $("#card_amount").text("<?= to_currency($amount_due) ?>");
+                $("#card_number").val('').focus();
+                $("#card_modal").modal('show');
+            } else if (paymentType === layby) {
+                $("#layby_amount").text("<?= to_currency($amount_due) ?>");
+                $("#layby_deposit").val("<?= to_currency_no_money($amount_due) ?>");
+                $("#layby_modal").modal('show');
+            } else {
+                $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+                $('#add_payment_form').submit();
+            }
         });
 
         $('#payment_types').change(check_payment_type).ready(check_payment_type);
@@ -960,6 +983,230 @@ helper('url');
                 break;
         }
     }
+</script>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- PAYMENT MODALS                         -->
+<!-- ═══════════════════════════════════════ -->
+
+<!-- Pesepay Modal -->
+<div class="modal fade" id="pesepay_modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title"><i class="glyphicon glyphicon-cloud-upload"></i> <?= lang('Sales.initiate_pesepay') ?></h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong><?= lang('Sales.amount_due') ?>:</strong> <span id="pesepay_amount"></span>
+                </div>
+                <p>A Pesepay checkout link will be generated for this transaction.</p>
+                <div class="form-group">
+                    <label>Customer Phone (for WhatsApp notification)</label>
+                    <input type="text" id="pesepay_phone" class="form-control" placeholder="e.g. 0771234567">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="pesepay_confirm">
+                    <i class="glyphicon glyphicon-ok"></i> <?= lang('Sales.initiate_pesepay') ?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- EcoCash Modal -->
+<div class="modal fade" id="ecocash_modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title"><i class="glyphicon glyphicon-phone"></i> <?= lang('Sales.initiate_ecocash') ?></h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong><?= lang('Sales.amount_due') ?>:</strong> <span id="ecocash_amount"></span>
+                </div>
+                <div class="form-group">
+                    <label><?= lang('Sales.phone_number') ?> <span style="color:red;">*</span></label>
+                    <input type="text" id="ecocash_phone" class="form-control" placeholder="<?= lang('Sales.ecocash_phone_hint') ?>" required>
+                    <small class="text-muted">EcoCash will send a payment prompt to this number</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="ecocash_confirm">
+                    <i class="glyphicon glyphicon-ok"></i> <?= lang('Sales.initiate_ecocash') ?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Card Payment Modal -->
+<div class="modal fade" id="card_modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title"><i class="glyphicon glyphicon-credit-card"></i> <?= lang('Sales.initiate_card') ?></h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong><?= lang('Sales.amount_due') ?>:</strong> <span id="card_amount"></span>
+                </div>
+                <div class="form-group">
+                    <label><?= lang('Sales.card_number') ?> <span style="color:red;">*</span></label>
+                    <input type="text" id="card_number" class="form-control" placeholder="Enter card number" maxlength="19">
+                </div>
+                <div class="form-group">
+                    <label><?= lang('Sales.card_holder') ?> <span style="color:red;">*</span></label>
+                    <input type="text" id="card_holder" class="form-control" placeholder="Name on card">
+                </div>
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            <label>Expiry <span style="color:red;">*</span></label>
+                            <input type="text" id="card_expiry" class="form-control" placeholder="MM/YY" maxlength="5">
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            <label>CVV <span style="color:red;">*</span></label>
+                            <input type="text" id="card_cvv" class="form-control" placeholder="CVV" maxlength="4">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="card_confirm">
+                    <i class="glyphicon glyphicon-ok"></i> <?= lang('Sales.initiate_card') ?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Layby Modal -->
+<div class="modal fade" id="layby_modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title"><i class="glyphicon glyphicon-calendar"></i> <?= lang('Sales.setup_layby') ?></h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong><?= lang('Sales.amount_due') ?>:</strong> <span id="layby_amount"></span>
+                </div>
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            <label><?= lang('Sales.layby_deposit') ?></label>
+                            <input type="number" step="0.01" id="layby_deposit" class="form-control" value="">
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            <label><?= lang('Sales.layby_installments') ?></label>
+                            <input type="number" min="1" id="layby_installment_count" class="form-control" value="3">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            <label><?= lang('Sales.layby_frequency') ?></label>
+                            <select id="layby_frequency" class="form-control">
+                                <option value="weekly"><?= lang('Sales.layby_weekly') ?></option>
+                                <option value="biweekly"><?= lang('Sales.layby_biweekly') ?></option>
+                                <option value="monthly" selected><?= lang('Sales.layby_monthly') ?></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="form-group">
+                            <label><?= lang('Sales.reference_code') ?></label>
+                            <input type="text" id="layby_ref" class="form-control" placeholder="Optional reference">
+                        </div>
+                    </div>
+                </div>
+                <div id="layby_summary" class="alert alert-default" style="margin-top:10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="layby_confirm">
+                    <i class="glyphicon glyphicon-ok"></i> <?= lang('Sales.setup_layby') ?>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+// Pesepay confirm
+$('#pesepay_confirm').click(function() {
+    var phone = $('#pesepay_phone').val();
+    $('#reference_code').val('PES' + (phone || 'MANUAL'));
+    $('#pesepay_modal').modal('hide');
+    $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+    $('#add_payment_form').submit();
+});
+
+// EcoCash confirm
+$('#ecocash_confirm').click(function() {
+    var phone = $('#ecocash_phone').val();
+    if (!phone || phone.length < 7) {
+        alert('Please enter a valid phone number');
+        return;
+    }
+    $('#reference_code').val('ECO' + phone);
+    $('#ecocash_modal').modal('hide');
+    $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+    $('#add_payment_form').submit();
+});
+
+// Card confirm
+$('#card_confirm').click(function() {
+    var num = $('#card_number').val();
+    var holder = $('#card_holder').val();
+    var expiry = $('#card_expiry').val();
+    var cvv = $('#card_cvv').val();
+    if (!num || !holder || !expiry || !cvv) {
+        alert('Please fill in all card details');
+        return;
+    }
+    var last4 = num.slice(-4);
+    $('#reference_code').val('CARD' + last4);
+    $('#card_modal').modal('hide');
+    $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+    $('#add_payment_form').submit();
+});
+
+// Layby confirm
+$('#layby_confirm').click(function() {
+    var ref = $('#layby_ref').val() || 'LAYBY' + Date.now();
+    $('#reference_code').val(ref);
+    $('#layby_modal').modal('hide');
+    $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+    $('#add_payment_form').submit();
+});
+
+// Layby summary update
+$('#layby_deposit, #layby_installment_count').on('input', function() {
+    var total = <?= to_currency_no_money($amount_due) ?>;
+    var deposit = parseFloat($('#layby_deposit').val()) || 0;
+    var count = parseInt($('#layby_installment_count').val()) || 1;
+    var balance = total - deposit;
+    var perInstallment = count > 0 ? balance / count : balance;
+    $('#layby_summary').html(
+        '<strong>Balance:</strong> ' + balance.toFixed(2) +
+        ' | <strong>Per installment:</strong> ' + perInstallment.toFixed(2)
+    );
+});
 </script>
 
 <?= view('partial/footer') ?>

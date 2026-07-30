@@ -31,6 +31,7 @@ use App\Models\Employee;
         $('#daterangepicker').data('daterangepicker').setStartDate("<?= date($config['dateformat'], mktime(0, 0, 0, 01, 01, 2010)) ?>");
         // Update the hidden inputs with the selected dates before submitting the search data
         var start_date = "<?= date('Y-m-d', mktime(0, 0, 0, 01, 01, 2010)) ?>";
+        var end_date = "<?= date('Y-m-d') ?>";
 
         // Override dates from server if provided
         <?php if (isset($start_date) && $start_date): ?>

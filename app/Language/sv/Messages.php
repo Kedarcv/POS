@@ -10,7 +10,7 @@ return [
     "phone"                 => "Telefonnummer",
     "phone_number_required" => "Telefonnummer krävs",
     "phone_placeholder"     => "Mobilnummer här...",
-    "sms_send"              => "Skicka SMS",
+    "sms_send"            => "",
     "successfully_sent"     => "Skickandet av meddelandet till lyckades: ",
     "unsuccessfully_sent"   => "Meddelandet skickades ej till: ",
 ];

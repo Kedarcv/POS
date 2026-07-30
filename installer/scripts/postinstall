@@ -1,0 +1,275 @@
+#!/bin/bash
+# BeamLink POS - Post-install Script
+# Runs after files are copied - initializes everything
+
+INSTALL_DIR="/Applications/BeamLink POS"
+DATA_DIR="$INSTALL_DIR/data"
+LOG_DIR="$DATA_DIR/logs"
+SETUP_LOG="/tmp/beamlink-pos-install.log"
+
+exec > "$SETUP_LOG" 2>&1
+
+echo "=== BeamLink POS Installation ==="
+echo "Starting post-install setup..."
+echo ""
+
+# ============================================
+# CREATE DIRECTORIES
+# ============================================
+echo "[1/8] Creating directories..."
+mkdir -p "$DATA_DIR"
+mkdir -p "$LOG_DIR"
+mkdir -p "$DATA_DIR/sessions"
+mkdir -p "$DATA_DIR/pids"
+mkdir -p "$DATA_DIR/stock"
+mkdir -p "$DATA_DIR/db"
+
+# ============================================
+# GENERATE DB PASSWORD
+# ============================================
+echo "[2/8] Generating database password..."
+DB_PASS=$(openssl rand -hex 16)
+echo "$DB_PASS" > "$DATA_DIR/.db_pass"
+chmod 600 "$DATA_DIR/.db_pass"
+
+# ============================================
+# CREATE MY.CNF
+# ============================================
+echo "[3/8] Creating MariaDB config..."
+cat > "$DATA_DIR/my.cnf" << EOF
+[mysqld]
+port=3307
+basedir=$INSTALL_DIR/mariadb
+datadir=$DATA_DIR/db
+socket=$DATA_DIR/mariadb.sock
+skip-name-resolve
+innodb_buffer_pool_size=64M
+innodb_log_file_size=8M
+max_allowed_packet=64M
+character-set-server=utf8mb4
+collation-server=utf8mb4_general_ci
+bind-address=127.0.0.1
+
+[client]
+port=3307
+socket=$DATA_DIR/mariadb.sock
+default-character-set=utf8mb4
+EOF
+
+# ============================================
+# CREATE PHP.INI
+# ============================================
+echo "[4/8] Creating PHP config..."
+cat > "$DATA_DIR/php.ini" << EOF
+memory_limit = 256M
+max_execution_time = 300
+upload_max_filesize = 100M
+post_max_size = 100M
+max_input_time = 300
+error_reporting = E_ALL & ~E_NOTICE & ~E_STRICT & ~E_DEPRECATED
+display_errors = Off
+log_errors = On
+error_log = $LOG_DIR/php_error.log
+session.save_path = $DATA_DIR/sessions
+date.timezone = Africa/Harare
+extension=mysqli
+extension=pdo_mysql
+extension=gd
+extension=zip
+extension=mbstring
+extension=curl
+extension=openssl
+EOF
+
+# ============================================
+# CREATE CADDYFILE
+# ============================================
+echo "[5/8] Creating Caddy config..."
+cat > "$DATA_DIR/Caddyfile" << EOF
+:8080 {
+    root * $INSTALL_DIR/app/public
+
+    php_fastcgi 127.0.0.1:9000 {
+        root $INSTALL_DIR/app/public
+    }
+
+    file_server
+    encode gzip
+}
+EOF
+
+# ============================================
+# CREATE .ENV
+# ============================================
+echo "[6/8] Creating environment config..."
+ENCRYPTION_KEY=$(openssl rand -hex 32)
+WEBHOOK_SECRET=$(openssl rand -hex 16)
+
+cat > "$DATA_DIR/.env" << EOF
+CI_ENVIRONMENT = 'production'
+app.baseURL = 'http://localhost:8080'
+app.allowedHostnames = 'localhost'
+
+database.default.hostname = '127.0.0.1'
+database.default.database = 'beamlink_pos'
+database.default.username = 'beamlink'
+database.default.password = '$DB_PASS'
+database.default.DBDriver = 'MySQLi'
+database.default.DBPrefix = 'ospos_'
+database.default.port = 3307
+
+encryption.key = '$ENCRYPTION_KEY'
+
+logger.threshold = 4
+app.db_log_enabled = false
+
+honeypot.hidden = true
+honeypot.label = 'Fill This Field'
+honeypot.name = 'honeypot'
+honeypot.template = '<label>{label}</label><input type="text" name="{name}" value="">'
+honeypot.container = '<div style="display:none">{template}</div>'
+
+BEAMLINK_WEBHOOK_URL = 'https://beamlink-erp.vercel.app/api/webhooks/whatsapp'
+BEAMLINK_API_URL = 'https://beamlink-erp.vercel.app'
+BEAMLINK_API_KEY = 'beamlink-pos-local-2026'
+BEAMLINK_SYNC_SECRET = 'beamlink-pos-local-2026'
+
+WHATSAPP_ACCESS_TOKEN = 'EAAHQnEhuTywBRHeJVQJYReR2xwWlBgZBBF6luqgSKBDZAlZCt4WpsKPUfJNSpAf6VxLlCdYHgJXL7UjNqZCHN4BqkyS0dMZCjUB18x1KPx73RDKCoXuFcZB01xzMs7ZAoudgM7EI6wf2yRsmdnCb4BJR7SlqS51CCWuuyRitCcZCzXanjgB9QMPm3wRuw5eUzBOAXwZDZD'
+WHATSAPP_PHONE_NUMBER_ID = '1122313694297443'
+WHATSAPP_BUSINESS_ACCOUNT_ID = '998404866041041'
+WHATSAPP_VERIFY_TOKEN = 'beamlink-erp-webhook-2026'
+WHATSAPP_BOT_NUMBER = '+263717174443'
+WHATSAPP_WEBHOOK_URL = 'http://localhost:8080/webhook/whatsapp'
+
+PESEPAY_INTEGRATION_KEY = '8246a8cd-72b7-45fa-81d8-381b757f1179'
+PESEPAY_ENCRYPTION_KEY = 'cddedb32a9bf49e7b832efe4b2b1a5a3'
+PESEPAY_ECOCASH_CODE = 'PZW211'
+PESEPAY_ONEMONEY_CODE = 'ONEMONEY'
+PESEPAY_CURRENCY_CODE = 'USD'
+
+PAYNOW_INTEGRATION_ID = '24171'
+PAYNOW_INTEGRATION_KEY = '2427ae68-0833-46f0-8eba-81dfdfa61de3'
+
+ECOCASH_API_KEY = ''
+ECOCASH_MODE = 'sandbox'
+
+OSPOS_WEBHOOK_SECRET = '$WEBHOOK_SECRET'
+
+appTimezone = 'Africa/Harare'
+EOF
+
+# Copy .env to app directory
+cp "$DATA_DIR/.env" "$INSTALL_DIR/app/.env"
+
+# ============================================
+# INITIALIZE MARIADB
+# ============================================
+echo "[7/8] Initializing database..."
+"$INSTALL_DIR/mariadb/scripts/mariadb-install-db" \
+    --datadir="$DATA_DIR/db" \
+    --user="$(whoami)" \
+    --basedir="$INSTALL_DIR/mariadb" \
+    > "$LOG_DIR/install_db.log" 2>&1
+
+# Start MariaDB temporarily
+echo "  Starting MariaDB for setup..."
+"$INSTALL_DIR/mariadb/bin/mariadbd" \
+    --defaults-file="$DATA_DIR/my.cnf" \
+    --console &
+MARIADB_PID=$!
+
+# Wait for MariaDB
+echo "  Waiting for MariaDB..."
+for i in {1..30}; do
+    if "$INSTALL_DIR/mariadb/bin/mariadb" \
+        --socket="$DATA_DIR/mariadb.sock" \
+        -u root \
+        -e "SELECT 1" > /dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+# Create database and user
+echo "  Creating database and user..."
+"$INSTALL_DIR/mariadb/bin/mariadb" \
+    --socket="$DATA_DIR/mariadb.sock" \
+    -u root << EOSQL
+CREATE DATABASE IF NOT EXISTS beamlink_pos CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+CREATE USER IF NOT EXISTS 'beamlink'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';
+CREATE USER IF NOT EXISTS 'beamlink'@'localhost' IDENTIFIED BY '$DB_PASS';
+GRANT ALL PRIVILEGES ON beamlink_pos.* TO 'beamlink'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON beamlink_pos.* TO 'beamlink'@'localhost';
+FLUSH PRIVILEGES;
+EOSQL
+
+# ============================================
+# RUN MIGRATIONS + SEED STOCK
+# ============================================
+echo "[8/8] Running migrations and seeding stock..."
+
+# Start PHP temporarily for migrations
+"$INSTALL_DIR/php/php" \
+    -S 127.0.0.1:9001 \
+    -t "$INSTALL_DIR/app/public" \
+    -c "$DATA_DIR/php.ini" \
+    > /dev/null 2>&1 &
+PHP_PID=$!
+
+sleep 2
+
+# Run migrations
+echo "  Running database migrations..."
+cd "$INSTALL_DIR/app"
+"$INSTALL_DIR/php/php" spark migrate --all 2>&1 | tail -20
+
+# Seed stock data
+if [ -f "$INSTALL_DIR/app/stock-data/STOCK.XLS" ]; then
+    echo "  Seeding stock data (922 items)..."
+    "$INSTALL_DIR/php/php" spark stock:import 2>&1 | tail -10
+fi
+
+# Stop temporary PHP
+kill $PHP_PID 2>/dev/null || true
+
+# Stop MariaDB
+echo "  Stopping temporary MariaDB..."
+"$INSTALL_DIR/mariadb/bin/mariadb" \
+    --socket="$DATA_DIR/mariadb.sock" \
+    -u root \
+    -e "SHUTDOWN;" 2>/dev/null || true
+
+sleep 2
+
+# ============================================
+# RESTORE BACKUP IF UPGRADING
+# ============================================
+if [ -f /tmp/beamlink-pos-env-backup ]; then
+    echo "  Restoring previous .env settings..."
+    # Keep the new DB password but restore other settings
+    cp /tmp/beamlink-pos-env-backup "$DATA_DIR/.env" 2>/dev/null || true
+    cp "$DATA_DIR/.env" "$INSTALL_DIR/app/.env"
+fi
+
+if [ -d /tmp/beamlink-pos-data-backup ]; then
+    echo "  Restoring previous data..."
+    # Only restore specific data files, not the entire db directory
+    cp /tmp/beamlink-pos-data-backup/.db_pass "$DATA_DIR/" 2>/dev/null || true
+    cp /tmp/beamlink-pos-data-backup/.installed "$DATA_DIR/" 2>/dev/null || true
+fi
+
+# ============================================
+# MARK AS INSTALLED
+# ============================================
+date '+%Y-%m-%d %H:%M:%S' > "$DATA_DIR/.installed"
+
+# Cleanup
+rm -rf /tmp/beamlink-pos-env-backup /tmp/beamlink-pos-data-backup
+
+echo ""
+echo "=== Installation Complete ==="
+echo "BeamLink POS has been installed to: $INSTALL_DIR"
+echo "Launch from Applications or Desktop shortcut."
+echo ""
+
+exit 0

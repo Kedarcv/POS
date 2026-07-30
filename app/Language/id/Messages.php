@@ -10,7 +10,7 @@ return [
     "phone"                 => "No. telepon",
     "phone_number_required" => "No. telepon dibutuhkan",
     "phone_placeholder"     => "Masukkan no. telepon disini...",
-    "sms_send"              => "Kirim SMS",
+    "sms_send"            => "",
     "successfully_sent"     => "Pesan berhasil dikirim ke: ",
     "unsuccessfully_sent"   => "Pesan gagal dikirim ke: ",
 ];

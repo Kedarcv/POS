@@ -84,6 +84,8 @@ return [
     "welcome"                        => "欢迎",
     "welcome_message"                => "欢迎使用OSPOS，请点击下面的模块开始使用。",
     "yes"                            => "",
-    "you_are_using_ospos"            => "您正在使用 Open Source Point Of Sale 版本",
+    "you_are_using_ospos"            => "您正在使用 BeamLink Point of Sale  版本",
     "zip"                            => "邮政编码",
+    "save" => "",
+    "cancel" => "",
 ];

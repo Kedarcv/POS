@@ -86,4 +86,6 @@ return [
     "yes"                            => "",
     "you_are_using_ospos"            => "",
     "zip"                            => "Poštanski broj",
+    "save" => "",
+    "cancel" => "",
 ];

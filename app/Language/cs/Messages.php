@@ -10,7 +10,7 @@ return [
     "phone"                 => "Telefonní číslo",
     "phone_number_required" => "Telefonní číslo je vyžadováno",
     "phone_placeholder"     => "Telefonní číslo...",
-    "sms_send"              => "Odeslat SMS",
+    "sms_send"            => "",
     "successfully_sent"     => "Zpráva byla odeslána: ",
     "unsuccessfully_sent"   => "Zpráva nebyla odeslána: ",
 ];

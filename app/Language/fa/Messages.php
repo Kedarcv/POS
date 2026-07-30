@@ -10,7 +10,7 @@ return [
     "phone"                 => "شماره تلفن",
     "phone_number_required" => "شماره تلفن مورد نیاز است",
     "phone_placeholder"     => "شماره تلفن همراه (ها) در اینجا ...",
-    "sms_send"              => "ارسال پیامک",
+    "sms_send"            => "",
     "successfully_sent"     => "پیام با موفقیت ارسال شد به:",
     "unsuccessfully_sent"   => "پیغام با موفقیت ارسال شد:",
 ];

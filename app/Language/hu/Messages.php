@@ -10,7 +10,7 @@ return [
     "phone"                 => "Telefonszám",
     "phone_number_required" => "Telefonszám kötelező",
     "phone_placeholder"     => "Mobil telefonszám(ok) ide...",
-    "sms_send"              => "SMS küldés",
+    "sms_send"            => "",
     "successfully_sent"     => "Az üzenet sikeresen elküldve: ",
     "unsuccessfully_sent"   => "Sikertelen üzenet küldés:: ",
 ];

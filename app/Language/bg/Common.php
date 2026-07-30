@@ -86,4 +86,6 @@ return [
     "yes"                            => "",
     "you_are_using_ospos"            => "Вие използвате Open Source Point Оf Sale версия",
     "zip"                            => "Пощенски код",
+    "save" => "",
+    "cancel" => "",
 ];

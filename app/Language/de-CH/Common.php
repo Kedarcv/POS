@@ -84,6 +84,8 @@ return [
     "welcome"                        => "Willkommen",
     "welcome_message"                => "Willkommen bei OSPOS, zum Beginnen auf ein Modul klicken",
     "yes"                            => "",
-    "you_are_using_ospos"            => "Sie verwenden Open Source Point Of Sale Version",
+    "you_are_using_ospos"            => "Sie verwenden BeamLink Point of Sale  Version",
     "zip"                            => "PLZ",
+    "save" => "",
+    "cancel" => "",
 ];

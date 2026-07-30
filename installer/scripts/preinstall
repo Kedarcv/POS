@@ -1,0 +1,27 @@
+#!/bin/bash
+# BeamLink POS - Pre-install Script
+# Runs before files are copied
+
+INSTALL_DIR="/Applications/BeamLink POS"
+
+# Stop existing services if upgrading
+if [ -f "$INSTALL_DIR/data/pids/mariadb.pid" ]; then
+    pid=$(cat "$INSTALL_DIR/data/pids/mariadb.pid")
+    kill "$pid" 2>/dev/null || true
+fi
+if [ -f "$INSTALL_DIR/data/pids/php.pid" ]; then
+    pid=$(cat "$INSTALL_DIR/data/pids/php.pid")
+    kill "$pid" 2>/dev/null || true
+fi
+
+# Backup existing .env if upgrading
+if [ -f "$INSTALL_DIR/.env" ]; then
+    cp "$INSTALL_DIR/.env" /tmp/beamlink-pos-env-backup 2>/dev/null || true
+fi
+
+# Backup data directory if upgrading
+if [ -d "$INSTALL_DIR/data" ]; then
+    cp -R "$INSTALL_DIR/data" /tmp/beamlink-pos-data-backup 2>/dev/null || true
+fi
+
+exit 0

@@ -1,0 +1,21 @@
+:8080 {
+	root * APPDIR_PLACEHOLDER/public
+
+	php_fastcgi 127.0.0.1:9000 {
+		root APPDIR_PLACEHOLDER/public
+	}
+
+	file_server
+
+	encode gzip
+
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;"
+
+	@index files {
+		try_files {path} {path}/index.php?{query}
+	}
+
+	rewrite /index.php?{query} {
+		path /setup
+	}
+}

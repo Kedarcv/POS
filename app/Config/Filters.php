@@ -73,7 +73,7 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             'honeypot',
-            'csrf' => ['except' => 'login|migrate'],
+            'csrf' => ['except' => 'login|migrate|webhook/*|notifications/*'],
             'invalidchars',
         ],
         'after' => [
@@ -121,7 +121,7 @@ class Filters extends BaseFilters
         // Remove CSRF filter from globals in testing environment
         if ($isTesting) {
             // Remove the 'csrf' key from $globals['before'] while preserving array structure
-            $this->globals['before'] = array_filter($this->globals['before'], static fn($key) => $key !== 'csrf', ARRAY_FILTER_USE_KEY);
+            $this->globals['before'] = array_filter($this->globals['before'], static fn ($key) => $key !== 'csrf', ARRAY_FILTER_USE_KEY);
         }
     }
 }

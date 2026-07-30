@@ -10,7 +10,7 @@ return [
     "phone"                 => "Telefonski broj",
     "phone_number_required" => "Broj telefona je obavezan",
     "phone_placeholder"     => "Broj mobilnog telefona ovde...",
-    "sms_send"              => "Pošalji SMS",
+    "sms_send"            => "",
     "successfully_sent"     => "Poruka je uspješno poslata: ",
     "unsuccessfully_sent"   => "Poruka nije uspešno poslata: ",
 ];

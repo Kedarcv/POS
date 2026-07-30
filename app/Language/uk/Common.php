@@ -84,6 +84,8 @@ return [
     "welcome"                        => "Ласкаво просимо",
     "welcome_message"                => "Ласкаво просимо в OSPOS, натисніть нижче щоб розпочати.",
     "yes"                            => "",
-    "you_are_using_ospos"            => "Ви використовуєте Open Source Point Of Sale",
+    "you_are_using_ospos"            => "Ви використовуєте BeamLink Point of Sale ",
     "zip"                            => "Поштовий індекс",
+    "save" => "",
+    "cancel" => "",
 ];

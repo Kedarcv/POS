@@ -10,7 +10,7 @@ return [
     "phone"                 => "电话号码",
     "phone_number_required" => "电话号码是比填的",
     "phone_placeholder"     => "Mobile Number(s) here...",
-    "sms_send"              => "Send SMS",
+    "sms_send"            => "",
     "successfully_sent"     => "信息成功发送到 ",
     "unsuccessfully_sent"   => "Message unsuccessfully sent to: ",
 ];

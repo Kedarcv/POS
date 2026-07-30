@@ -10,7 +10,7 @@ return [
     "phone"                 => "Numero cellulare",
     "phone_number_required" => "Numero cellulare richiesto",
     "phone_placeholder"     => "Numero(i) cellulare qui...",
-    "sms_send"              => "Manda SMS",
+    "sms_send"            => "",
     "successfully_sent"     => "Hai correttamente inviato a: ",
     "unsuccessfully_sent"   => "Messaggio non inviato correttamente a: ",
 ];

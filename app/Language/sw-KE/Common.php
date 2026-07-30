@@ -74,7 +74,7 @@ return [
     "search_options"                 => "Chaguo za Utafutaji",
     "searched_for"                   => "Umetafuta",
     "software_short"                 => "OSPOS",
-    "software_title"                 => "Open Source Point of Sale",
+    "software_title"                 => "BeamLink Point of Sale ",
     "state"                          => "Jimbo",
     "submit"                         => "Wasilisha",
     "total_spent"                    => "Jumla Iliyotumika",
@@ -86,4 +86,6 @@ return [
     "yes"                            => "Ndiyo",
     "you_are_using_ospos"            => "",
     "zip"                            => "Namba ya Posta",
+    "save" => "",
+    "cancel" => "",
 ];

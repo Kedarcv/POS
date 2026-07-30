@@ -10,7 +10,7 @@ return [
     "phone"                 => "رقم المحمول",
     "phone_number_required" => "رقم المحمول مطلوب",
     "phone_placeholder"     => "رقم/أرقام المحمول هنا...",
-    "sms_send"              => "إرسال SMS",
+    "sms_send"            => "",
     "successfully_sent"     => "تم إرسال الرسالة بنجاح إلى: ",
     "unsuccessfully_sent"   => "لم يتم إرسال الرسالة بنجاح إلى: ",
 ];

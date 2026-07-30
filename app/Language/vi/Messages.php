@@ -10,7 +10,7 @@ return [
     "phone"                 => "Số điện thoại",
     "phone_number_required" => "Cần số điện thoại",
     "phone_placeholder"     => "Các số di động ở đây...",
-    "sms_send"              => "Gửi SMS",
+    "sms_send"            => "",
     "successfully_sent"     => "Tin nhắn được gửi thành công cho: ",
     "unsuccessfully_sent"   => "Tin nhắn được gửi không thành công cho: ",
 ];

@@ -5,10 +5,13 @@
 </script>
 
 <div class="jumbotron" style="max-width: 60%; margin: auto;">
-    <?= form_open("messages/send/", ['id' => 'send_sms_form', 'enctype' => 'multipart/form-data', 'method' => 'post', 'class' => 'form-horizontal']) ?>
+    <?= form_open("messages/send/", ['id' => 'send_whatsapp_form', 'enctype' => 'multipart/form-data', 'method' => 'post', 'class' => 'form-horizontal']) ?>
         <fieldset>
 
-            <legend style="text-align: center;"><?= lang('Messages.sms_send') ?></legend>
+            <legend style="text-align: center;">
+                <span style="color: #25d366; font-size: 1.1em;">&#128172;</span>
+                <?= lang('Messages.whatsapp_send') ?>
+            </legend>
             <div class="form-group form-group-sm">
                 <label for="phone" class="col-xs-3 control-label"><?= lang('Messages.phone') ?></label>
                 <div class="col-xs-9">
@@ -28,7 +31,7 @@
                 'name'  => 'submit_form',
                 'id'    => 'submit_form',
                 'value' => lang('Common.submit'),
-                'class' => 'btn btn-primary btn-sm pull-right'
+                'class' => 'btn btn-success btn-sm pull-right'
             ]) ?>
 
         </fieldset>
@@ -40,7 +43,7 @@
 <script type="text/javascript">
     // Validation and submit handling
     $(document).ready(function() {
-        $('#send_sms_form').validate({
+        $('#send_whatsapp_form').validate({
             submitHandler: function(form) {
                 $(form).ajaxSubmit({
                     success: function(response) {

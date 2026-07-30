@@ -10,7 +10,7 @@ return [
     "phone"                 => "Telefon",
     "phone_number_required" => "Telefon nömrəsi tələb olunur",
     "phone_placeholder"     => "Mobil Nömrə(lər) burada...",
-    "sms_send"              => "SMS Göndər",
+    "sms_send"            => "",
     "successfully_sent"     => "Mesaj uğurla göndərildi: ",
     "unsuccessfully_sent"   => "Mesaj uğursuz olaraq göndərildi: ",
 ];

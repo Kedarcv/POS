@@ -19,6 +19,10 @@
 
 <div id="receipt_wrapper" style="font-size: <?= $config['receipt_font_size'] ?>px;">
     <div id="receipt_header">
+        <div style="text-align: center; margin-bottom: 5px;">
+            <img src="<?= base_url('images/logo.png') ?>" alt="BeamLink" style="max-width: 120px; height: auto;">
+        </div>
+
         <?php if ($config['company_logo'] != '') { ?>
             <div id="company_name">
                 <img id="image" src="<?= base_url('uploads/' . esc($config['company_logo'], 'url')) ?>" alt="company_logo">
@@ -26,13 +30,20 @@
         <?php } ?>
 
         <?php if ($config['receipt_show_company_name']) { ?>
-            <div id="company_name"><?= nl2br(esc($config['company'])) ?></div>
+            <div id="company_name" style="font-weight: bold; text-align: center; font-size: 120%;"><?= nl2br(esc($config['company'])) ?></div>
+        <?php } else { ?>
+            <div id="company_name" style="font-weight: bold; text-align: center; font-size: 120%;">BeamLink</div>
         <?php } ?>
 
-        <div id="company_address"><?= nl2br(esc($config['address'])) ?></div>
-        <div id="company_phone"><?= esc($config['phone']) ?></div>
-        <div id="sale_receipt"><?= lang('Sales.receipt') ?></div>
-        <div id="sale_time"><?= ($transaction_time) ?></div>
+        <div id="company_address" style="text-align: center;"><?= nl2br(esc($config['address'])) ?></div>
+        <div id="company_phone" style="text-align: center;"><?= esc($config['phone']) ?></div>
+
+        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+
+        <div id="sale_receipt" style="text-align: center; font-weight: bold;"><?= lang('Sales.receipt') ?></div>
+        <div id="sale_time" style="text-align: center;"><?= ($transaction_time) ?></div>
+
+        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
     </div>
 
     <div id="receipt_general_info">
@@ -48,6 +59,8 @@
 
         <div id="employee"><?= lang('Employees.employee') . esc(": $employee") ?></div>
     </div>
+
+    <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
 
     <table id="receipt_items">
         <tr>
@@ -96,10 +109,12 @@
         }
         ?>
 
+        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+
         <?php if ($config['receipt_show_total_discount'] && $discount > 0) { ?>
             <tr>
-                <td colspan="3" style="text-align: right; border-top: 2px solid #000000;"><?= lang('Sales.sub_total') ?></td>
-                <td style="text-align: right; border-top:2px solid #000000;"><?= to_currency($prediscount_subtotal) ?></td>
+                <td colspan="3" style="text-align: right;"><?= lang('Sales.sub_total') ?></td>
+                <td style="text-align: right;"><?= to_currency($prediscount_subtotal) ?></td>
             </tr>
             <tr>
                 <td colspan="3" class="total-value"><?= lang('Sales.customer_discount') ?>:</td>
@@ -109,8 +124,8 @@
 
         <?php if ($config['receipt_show_taxes']) { ?>
             <tr>
-                <td colspan="3" style="text-align: right; border-top: 2px solid #000000;"><?= lang('Sales.sub_total') ?></td>
-                <td style="text-align: right; border-top: 2px solid #000000;"><?= to_currency($subtotal) ?></td>
+                <td colspan="3" style="text-align: right;"><?= lang('Sales.sub_total') ?></td>
+                <td style="text-align: right;"><?= to_currency($subtotal) ?></td>
             </tr>
             <?php foreach ($taxes as $tax_group_index => $tax) { ?>
                 <tr>
@@ -126,8 +141,8 @@
 
         <?php $border = (!$config['receipt_show_taxes'] && !($config['receipt_show_total_discount'] && $discount > 0)); ?>
         <tr>
-            <td colspan="3" style="text-align: right;<?= $border ? ' border-top: 2px solid black;' : '' ?>"><?= lang('Sales.total') ?></td>
-            <td style="text-align: right;<?= $border ? ' border-top: 2px solid black;' : '' ?>"><?= to_currency($total) ?></td>
+            <td colspan="3" style="text-align: right; font-weight: bold;<?= $border ? ' border-top: 2px solid black;' : '' ?>"><?= lang('Sales.total') ?></td>
+            <td style="text-align: right; font-weight: bold;<?= $border ? ' border-top: 2px solid black;' : '' ?>"><?= to_currency($total) ?></td>
         </tr>
 
         <tr>
@@ -139,7 +154,7 @@
         $show_giftcard_remainder = false;
         foreach ($payments as $payment_id => $payment) {
             $only_sale_check |= $payment['payment_type'] == lang('Sales.check');
-            $splitpayment = explode(':', $payment['payment_type']);    // TODO: The variable splitpayment does not follow naming conventions for this project
+            $splitpayment = explode(':', $payment['payment_type']);
             $show_giftcard_remainder |= $splitpayment[0] == lang('Sales.giftcard');
         ?>
             <tr>
@@ -159,17 +174,25 @@
             </tr>
         <?php } ?>
         <tr>
-            <td colspan="3" style="text-align: right;"> <?= lang($amount_change >= 0 ? ($only_sale_check ? 'Sales.check_balance' : 'Sales.change_due') : 'Sales.amount_due') ?> </td>
-            <td class="total-value"><?= to_currency($amount_change) ?></td>
+            <td colspan="3" style="text-align: right; font-weight: bold;"> <?= lang($amount_change >= 0 ? ($only_sale_check ? 'Sales.check_balance' : 'Sales.change_due') : 'Sales.amount_due') ?> </td>
+            <td class="total-value" style="font-weight: bold;"><?= to_currency($amount_change) ?></td>
         </tr>
     </table>
 
-    <div id="sale_return_policy">
+    <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+
+    <div id="sale_return_policy" style="text-align: center;">
         <?= nl2br(esc($config['return_policy'])) ?>
     </div>
 
-    <div id="barcode">
+    <div id="barcode" style="text-align: center;">
         <?= $barcode ?><br>
         <?= $sale_id ?>
+    </div>
+
+    <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+
+    <div style="text-align: center; font-size: 80%; color: #555;">
+        Second Spark Intelligence &copy; 2026 &middot; secondspark.co.zw
     </div>
 </div>

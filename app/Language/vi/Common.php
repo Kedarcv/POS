@@ -84,6 +84,8 @@ return [
     "welcome"                        => "Chào mừng",
     "welcome_message"                => "Chọn 1 trong những tính năng dưới đây để bắt đầu.",
     "yes"                            => "",
-    "you_are_using_ospos"            => "Bạn đang sử dụng Open Source Point Of Sale phiên bản",
+    "you_are_using_ospos"            => "Bạn đang sử dụng BeamLink Point of Sale  phiên bản",
     "zip"                            => "Mã bưu điện",
+    "save" => "",
+    "cancel" => "",
 ];

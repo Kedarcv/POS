@@ -1,77 +1,109 @@
 <?php
 
-namespace app\Libraries;
+declare(strict_types=1);
 
-use CodeIgniter\Encryption\Encryption;
-use CodeIgniter\Encryption\EncrypterInterface;
-use Config\OSPOS;
-use Config\Services;
+namespace App\Libraries;
 
+use Throwable;
 
 /**
- * SMS library
+ * WhatsApp messaging library — sends messages via WhatsApp Cloud API.
  *
- * Library with utilities to send texts via SMS Gateway (requires proxy implementation)
+ * Replaces the legacy SMS gateway. Uses the same credentials configured
+ * in .env (WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID).
  */
-
 class Sms_lib
 {
-    /**
-     * SMS sending function
-     * Example of use: $response = sendSMS('4477777777', 'My test message');
-     */
-    public function sendSMS(int $phone, string $message): bool
+    private string $accessToken;
+    private string $phoneNumberId;
+
+    public function __construct()
     {
-        $config = config(OSPOS::class)->settings;
+        $this->accessToken   = getenv('WHATSAPP_ACCESS_TOKEN') ?: '';
+        $this->phoneNumberId = getenv('WHATSAPP_PHONE_NUMBER_ID') ?: '';
+    }
 
-        $encrypter = Services::encrypter();
+    /**
+     * Send a WhatsApp text message.
+     *
+     * @param string $phone    Recipient phone (with country code, no + prefix)
+     * @param string $message  Text message body
+     *
+     * @return bool  true on success, false on failure
+     */
+    public function sendSMS(string $phone, string $message): bool
+    {
+        if ($this->accessToken === '' || $this->phoneNumberId === '') {
+            log_message('error', '[WhatsApp] Not configured — message to ' . $phone . ' skipped');
 
-        $password = $config['msg_pwd'];
-        if (!empty($password)) {
-            $password = $encrypter->decrypt($password);
+            return false;
         }
 
-        $username = $config['msg_uid'];
-        $originator = $config['msg_src'];
+        if (empty($phone) || empty($message)) {
+            log_message('error', '[WhatsApp] Empty phone or message — skipped');
 
-        $response = false;
-
-        // If any of the parameters is empty return with a false
-        if (empty($username) || empty($password) || empty($phone) || empty($message) || empty($originator)) {    // TODO: This if/else needs to be flipped. and shortened.  No else needed in the code example below.
-            // $parameters = [$username, $password, $phone, $message, $originator];
-            // if (count(array_filter($parameters)) === 5) {
-            //     $response = true;
-            //     $message = rawurlencode($message);
-            // }
-            // echo $username . ' ' . $password . ' ' . $phone . ' ' . $message . ' ' . $originator;
-        } else {
-            $response = true;
-            // TODO: These comments should be moved to the documentation.  As is, they tend to get out of date.
-            // make sure passed string is url encoded
-            $message = rawurlencode($message);    // TODO: $message needs to be passed by reference if you want this line to actually do anything
-
-            // Add call to send a message via 3rd party API here
-            // Some examples
-
-            /*
-             * $url = "http://xxx.xxx.xxx.xxx/send_sms?username=$username&password=$password&src=$originator&dst=$phone&msg=$message&dr=1";
-             *
-             * $c = curl_init();
-             * curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
-             * curl_setopt($c, CURLOPT_URL, $url);
-             * $response = curl_exec($c);
-             * curl_close($c);
-            */
-
-            // This is a textmarketer.co.uk API call, see: http://wiki.textmarketer.co.uk/display/DevDoc/Text+Marketer+Developer+Documentation+-+Wiki+Home
-            /*
-             * $url = 'https://api.textmarketer.co.uk/gateway/'."?username=$username&password=$password&option=xml";
-             * $url .= "&to=$phone&message=".urlencode($message).'&orig='.urlencode($originator);
-             * $fp = fopen($url, 'r');
-             * $response = fread($fp, 1024);
-            */
+            return false;
         }
 
-        return $response;
+        // Normalise phone: strip +, spaces, dashes
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+
+        // Ensure leading country code (default to 263 = Zimbabwe if local)
+        if (strlen($phone) <= 9) {
+            $phone = '263' . ltrim($phone, '0');
+        }
+
+        try {
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'to'                => $phone,
+                'type'              => 'text',
+                'text'              => [
+                    'preview_url' => false,
+                    'body'        => $message,
+                ],
+            ];
+
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL            => "https://graph.facebook.com/v21.0/{$this->phoneNumberId}/messages",
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => json_encode($payload, JSON_THROW_ON_ERROR),
+                CURLOPT_HTTPHEADER     => [
+                    'Authorization: Bearer ' . $this->accessToken,
+                    'Content-Type: application/json',
+                ],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 15,
+                CURLOPT_CONNECTTIMEOUT => 5,
+            ]);
+
+            $body     = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            $error    = curl_error($ch);
+            curl_close($ch);
+
+            if ($error) {
+                log_message('error', '[WhatsApp] cURL error: ' . $error . ' — to: ' . $phone);
+
+                return false;
+            }
+
+            $decoded = json_decode($body, true);
+
+            if ($httpCode >= 200 && $httpCode < 300) {
+                log_message('info', '[WhatsApp] Message sent to ' . $phone . ' (ID: ' . ($decoded['messages'][0]['id'] ?? 'unknown') . ')');
+
+                return true;
+            }
+
+            log_message('error', '[WhatsApp] API error (HTTP ' . $httpCode . '): ' . $body . ' — to: ' . $phone);
+
+            return false;
+        } catch (Throwable $e) {
+            log_message('error', '[WhatsApp] Exception: ' . $e->getMessage() . ' — to: ' . $phone);
+
+            return false;
+        }
     }
 }

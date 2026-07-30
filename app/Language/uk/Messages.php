@@ -10,7 +10,7 @@ return [
     "phone"                 => "Номер телефону",
     "phone_number_required" => "Необхідний номер телефону",
     "phone_placeholder"     => "Мобільний номер (и) тут ...",
-    "sms_send"              => "Надіслати SMS",
+    "sms_send"            => "",
     "successfully_sent"     => "Повідомлення успішно надіслано: ",
     "unsuccessfully_sent"   => "Повідомлення невдало надіслано: ",
 ];

@@ -10,7 +10,7 @@ return [
     "phone"                 => "ເບີໂທ",
     "phone_number_required" => "ເບີໂທຈຳເປັນຕ້ອງໃສ່",
     "phone_placeholder"     => "ໃສ່ເບີໂທບ່ອນນີ້...",
-    "sms_send"              => "ສົ່ງ SMS",
+    "sms_send"            => "",
     "successfully_sent"     => "ສົ່ງຂໍ້ຄວາມສຳເລັດ ໄປຫາ: ",
     "unsuccessfully_sent"   => "ສົ່ງຂໍ້ຄວາມບໍ່ສຳເລັດ ໄປຫາ: ",
 ];

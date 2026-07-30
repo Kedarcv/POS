@@ -74,7 +74,7 @@ return [
     "search_options"                 => "Suchkriterien",
     "searched_for"                   => "Gescuht nach",
     "software_short"                 => "OSPOS",
-    "software_title"                 => "Open Source Point of Sale",
+    "software_title"                 => "BeamLink Point of Sale ",
     "state"                          => "BL/Kanton",
     "submit"                         => "Senden",
     "total_spent"                    => "Gesamtausgaben",
@@ -84,6 +84,8 @@ return [
     "welcome"                        => "Willkommen",
     "welcome_message"                => "Willkommen bei OSPOS, zum Beginnen auf ein Modul klicken.",
     "yes"                            => "Ja",
-    "you_are_using_ospos"            => "Sie verwenden Open Source Point Of Sale Version",
+    "you_are_using_ospos"            => "Sie verwenden BeamLink Point of Sale  Version",
     "zip"                            => "PLZ",
+    "save" => "",
+    "cancel" => "",
 ];

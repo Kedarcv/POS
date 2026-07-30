@@ -10,7 +10,8 @@ return [
     "phone"                 => "Phone number",
     "phone_number_required" => "Phone number required",
     "phone_placeholder"     => "Mobile Number(s) here...",
-    "sms_send"              => "Send SMS",
+    "sms_send"              => "Send WhatsApp",
+    "whatsapp_send"         => "Send WhatsApp Message",
     "successfully_sent"     => "Message successfully sent to: ",
-    "unsuccessfully_sent"   => "Message unsuccessfully sent to: ",
+    "unsuccessfully_sent"   => "Message failed to send to: ",
 ];

@@ -10,7 +10,7 @@ return [
     "phone"                 => "លេខទូរស័ព្ទ",
     "phone_number_required" => "តំរូវអោយបំពេញលេខទូរស័ព្ទ",
     "phone_placeholder"     => "បំពេញលេខទូរស័ព្ទនៅទីនេះ...",
-    "sms_send"              => "ផ្ញើរសារ",
+    "sms_send"            => "",
     "successfully_sent"     => "ការផ្ញើរសារបានជោគជ័យទៅកាន់: ",
     "unsuccessfully_sent"   => "ការផ្ញើរសារមិនបានជោគជ័យទៅកាន់: ",
 ];
