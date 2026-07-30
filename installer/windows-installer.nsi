@@ -2,7 +2,7 @@
 ; Creates a Windows installer (.exe) with bundled PHP, MariaDB, and Caddy
 
 !include "MUI2.nsh"
-!include "LogicFunc.nsh"
+!include "LogicLib.nsh"
 
 ;--------------------------------
 ; General

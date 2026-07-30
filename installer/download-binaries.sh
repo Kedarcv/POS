@@ -64,13 +64,45 @@ if [ "$PLATFORM" = "mac" ]; then
     chmod +x "$BIN_DIR/caddy-mac-arm64/caddy" 2>/dev/null || true
     rm -f "$BIN_DIR/caddy-mac-arm64.tar.gz"
 
-    # MariaDB
+    # MariaDB - copy from Homebrew (no official macOS arm64 tarball available)
     log "--- MariaDB ---"
-    download_file \
-        "https://archive.mariadb.org/mariadb-11.4.5/mariadb-11.4.5-osx11.0-arm64.tar.gz" \
-        "$BIN_DIR/mariadb-mac-arm64.tar.gz"
-    extract_file "$BIN_DIR/mariadb-mac-arm64.tar.gz" "$BIN_DIR/mariadb-mac-arm64"
-    rm -f "$BIN_DIR/mariadb-mac-arm64.tar.gz"
+    if [ ! -f "$BIN_DIR/mariadb-mac-arm64/bin/mariadbd" ] || [ ! -s "$BIN_DIR/mariadb-mac-arm64/bin/mariadbd" ]; then
+        rm -rf "$BIN_DIR/mariadb-mac-arm64"
+        BREW_MARIADB="$(brew --prefix mariadb 2>/dev/null || echo "")"
+        if [ -z "$BREW_MARIADB" ] || [ ! -d "$BREW_MARIADB" ]; then
+            log "Installing MariaDB via Homebrew..."
+            brew install mariadb
+            BREW_MARIADB="$(brew --prefix mariadb)"
+        fi
+        log "Copying MariaDB from Homebrew: $BREW_MARIADB"
+        mkdir -p "$BIN_DIR/mariadb-mac-arm64/bin"
+        mkdir -p "$BIN_DIR/mariadb-mac-arm64/share"
+        mkdir -p "$BIN_DIR/mariadb-mac-arm64/lib"
+        # Copy essential binaries
+        for bin in mariadbd mariadb mariadb-install-db mariadbd-safe mysql_install_db; do
+            if [ -f "$BREW_MARIADB/bin/$bin" ]; then
+                cp "$BREW_MARIADB/bin/$bin" "$BIN_DIR/mariadb-mac-arm64/bin/"
+                chmod +x "$BIN_DIR/mariadb-mac-arm64/bin/$bin"
+            fi
+        done
+        # Copy share (needed for mysql_install_db / mariadb-install-db)
+        if [ -d "$BREW_MARIADB/share/mariadb" ]; then
+            cp -R "$BREW_MARIADB/share/mariadb" "$BIN_DIR/mariadb-mac-arm64/share/"
+        elif [ -d "$BREW_MARIADB/share/mysql" ]; then
+            cp -R "$BREW_MARIADB/share/mysql" "$BIN_DIR/mariadb-mac-arm64/share/mariadb"
+        fi
+        # Copy required libraries
+        if [ -d "$BREW_MARIADB/lib" ]; then
+            cp -R "$BREW_MARIADB/lib/"*.dylib "$BIN_DIR/mariadb-mac-arm64/lib/" 2>/dev/null || true
+        fi
+        # Copy plugin directory
+        if [ -d "$BREW_MARIADB/lib/plugin" ]; then
+            cp -R "$BREW_MARIADB/lib/plugin" "$BIN_DIR/mariadb-mac-arm64/lib/"
+        fi
+        log "MariaDB binaries copied successfully."
+    else
+        log "Already exists: $BIN_DIR/mariadb-mac-arm64/bin/mariadbd"
+    fi
 
     log "=== macOS arm64 binaries downloaded ==="
     log "PHP:  $BIN_DIR/php-mac-arm64/php"
