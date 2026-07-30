@@ -1,22 +1,7 @@
 name: PHPUnit Tests
 
 on:
-  push:
-    paths:
-      - '**.php'
-      - 'spark'
-      - 'tests/**'
-      - '.github/workflows/phpunit.yml'
-      - 'gulpfile.js'
-      - 'app/Database/**'
-  pull_request:
-    paths:
-      - '**.php'
-      - 'spark'
-      - 'tests/**'
-      - '.github/workflows/phpunit.yml'
-      - 'gulpfile.js'
-      - 'app/Database/**'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}

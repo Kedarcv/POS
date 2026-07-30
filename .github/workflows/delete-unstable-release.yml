@@ -1,9 +1,7 @@
 name: "Delete Unstable Release"
 
 on:
-  push:
-    branches:
-    - master
+  workflow_dispatch:
 
 jobs:
   delete_unstable_release:

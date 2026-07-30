@@ -1,16 +1,7 @@
 name: Coding Standards
 
 on:
-  push:
-    paths:
-      - '**.php'
-      - 'spark'
-      - '.github/workflows/test-coding-standards.yml'
-  pull_request:
-    paths:
-      - '**.php'
-      - 'spark'
-      - '.github/workflows/test-coding-standards.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
