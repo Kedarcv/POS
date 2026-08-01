@@ -1824,14 +1824,74 @@ class Sales extends Secure_Controller
      * @param array $shopping_cart
      * @return int|string|null
      */
-    public function search_cart_for_item_id(int $search_item_id, array $shopping_cart): int|string|null
+    /**
+     * Initiate EcoCash Payment Charge (USSD Push Prompt)
+     */
+    public function postInitiateEcocash(): ResponseInterface
     {
-        foreach ($shopping_cart as $key => $val) {
-            if ($val['item_id'] === $search_item_id) {
-                return $key;
+        $phone  = $this->request->getPost('phone', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $amount = (float)$this->request->getPost('amount', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+
+        if (empty($phone) || $amount <= 0) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Valid phone number and amount are required.',
+            ]);
+        }
+
+        $ecocashLib = new \App\Libraries\Ecocash_lib();
+        $result = $ecocashLib->charge($phone, $amount);
+
+        // Record in external_payments table
+        try {
+            $extPayment = model(\App\Models\Externalpayment::class);
+            $extPayment->save([
+                'gateway'           => 'ecocash',
+                'payment_reference' => $result['clientCorrelator'] ?? ('ECO-' . time()),
+                'amount'            => $amount,
+                'currency'          => 'USD',
+                'status'            => $result['status'] ?? 'PENDING',
+                'customer_phone'    => $result['msisdn'] ?? $phone,
+                'raw_payload'       => json_encode($result),
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', '[Sales EcoCash Save] ' . $e->getMessage());
+        }
+
+        return $this->response->setJSON([
+            'success'          => $result['success'],
+            'status'           => $result['status'],
+            'message'          => $result['message'],
+            'clientCorrelator' => $result['clientCorrelator'] ?? '',
+            'phone'            => $result['msisdn'] ?? $phone,
+        ]);
+    }
+
+    /**
+     * Check EcoCash Transaction Status
+     */
+    public function getCheckEcocashStatus(string $phone, string $correlator): ResponseInterface
+    {
+        $ecocashLib = new \App\Libraries\Ecocash_lib();
+        $result = $ecocashLib->lookupStatus($phone, $correlator);
+
+        if ($result['success'] && in_array(strtoupper($result['status']), ['COMPLETED', 'SUCCESS', 'SUCCESSFUL', 'PAID'])) {
+            // Update external payment record
+            try {
+                $extPayment = model(\App\Models\Externalpayment::class);
+                $row = $extPayment->where('payment_reference', $correlator)->first();
+                if ($row) {
+                    $extPayment->update($row['id'], [
+                        'status'      => 'COMPLETED',
+                        'raw_payload' => json_encode($result),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                log_message('error', '[Sales EcoCash Update] ' . $e->getMessage());
             }
         }
 
-        return null;
+        return $this->response->setJSON($result);
     }
 }
+

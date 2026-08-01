@@ -1163,10 +1163,42 @@ $('#ecocash_confirm').click(function() {
         alert('Please enter a valid phone number');
         return;
     }
-    $('#reference_code').val('ECO' + phone);
-    $('#ecocash_modal').modal('hide');
-    $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
-    $('#add_payment_form').submit();
+    var amountDue = $('#amount_tendered').val() || 0;
+    var $btn = $(this);
+    var origText = $btn.html();
+    $btn.prop('disabled', true).html('<i class="glyphicon glyphicon-refresh glyphicon-spin"></i> Sending prompt to customer phone...');
+
+    $.ajax({
+        url: "<?= site_url('sales/initiate_ecocash') ?>",
+        type: 'POST',
+        data: {
+            phone: phone,
+            amount: amountDue,
+            "<?= csrf_token() ?>": "<?= csrf_hash() ?>"
+        },
+        dataType: 'json',
+        success: function(res) {
+            $btn.prop('disabled', false).html(origText);
+            if (res.success || res.status === 'PENDING' || res.status === 'COMPLETED' || res.status === 'SUCCESS') {
+                var refCode = res.clientCorrelator || ('ECO-' + phone);
+                $('#reference_code').val(refCode);
+                $('#ecocash_modal').modal('hide');
+                $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+                $('#add_payment_form').submit();
+            } else {
+                alert('EcoCash Payment Failed: ' + (res.message || 'Could not initiate transaction.'));
+            }
+        },
+        error: function(xhr, status, err) {
+            $btn.prop('disabled', false).html(origText);
+            // Fallback: allow manual confirmation if EcoCash API is unreachable offline
+            var refCode = 'ECO-' + phone;
+            $('#reference_code').val(refCode);
+            $('#ecocash_modal').modal('hide');
+            $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+            $('#add_payment_form').submit();
+        }
+    });
 });
 
 // Card confirm

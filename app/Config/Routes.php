@@ -102,6 +102,8 @@ $routes->post('webhook/whatsapp', 'Webhook::whatsappCallback');
 $routes->post('webhook/pesepay', 'Webhook::pesepayCallback');
 $routes->post('webhook/ecocash', 'Webhook::ecocashCallback');
 $routes->post('webhook/paynow', 'Webhook::paynowCallback');
+$routes->post('sales/initiate_ecocash', 'Sales::postInitiateEcocash');
+$routes->get('sales/check_ecocash/(:any)/(:any)', 'Sales::getCheckEcocashStatus/$1/$2');
 
 // BeamLink ERP (bidirectional sync)
 $routes->post('webhook/beamlink', 'Webhook::beamlinkCallback');
