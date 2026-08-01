@@ -13,6 +13,16 @@ set "DATA_DIR=%INSTALL_DIR%data"
 set "LOG_DIR=%DATA_DIR%\logs"
 set "PID_DIR=%DATA_DIR%\pids"
 set "MARIADB_DIR=%INSTALL_DIR%mariadb"
+
+:: Auto-detect nested MariaDB folder if needed
+if not exist "%MARIADB_DIR%\bin\mariadbd.exe" (
+    for /d %%d in ("%MARIADB_DIR%\mariadb-*") do (
+        if exist "%%d\bin\mariadbd.exe" (
+            set "MARIADB_DIR=%%d"
+        )
+    )
+)
+
 set "PHP_DIR=%INSTALL_DIR%php"
 set "CADDY_DIR=%INSTALL_DIR%caddy"
 set "APP_DIR=%INSTALL_DIR%app"
@@ -40,7 +50,13 @@ if exist "%PID_DIR%\mariadb.pid" (
 :: Initialize MariaDB if needed
 if not exist "%DATA_DIR%\db" (
     echo [%APP_NAME%] Initializing database...
-    "%MARIADB_DIR%\bin\mariadb-install-db.exe" --datadir="%DATA_DIR%\db" --basedir="%MARIADB_DIR%"
+    if exist "%MARIADB_DIR%\bin\mariadb-install-db.exe" (
+        "%MARIADB_DIR%\bin\mariadb-install-db.exe" --datadir="%DATA_DIR%\db" --basedir="%MARIADB_DIR%"
+    ) else if exist "%MARIADB_DIR%\bin\mysql_install_db.exe" (
+        "%MARIADB_DIR%\bin\mysql_install_db.exe" --datadir="%DATA_DIR%\db" --basedir="%MARIADB_DIR%"
+    ) else (
+        "%MARIADB_DIR%\bin\mariadbd.exe" --initialize-insecure --datadir="%DATA_DIR%\db" --basedir="%MARIADB_DIR%"
+    )
     if !errorlevel! neq 0 (
         echo [%APP_NAME%] ERROR: Failed to initialize database
         pause

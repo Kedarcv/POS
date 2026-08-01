@@ -134,8 +134,16 @@ elif [ "$PLATFORM" = "windows" ]; then
     download_file \
         "https://archive.mariadb.org/mariadb-11.4.5/winx64-packages/mariadb-11.4.5-winx64.zip" \
         "$BIN_DIR/mariadb-win-x64.zip"
-    extract_file "$BIN_DIR/mariadb-win-x64.zip" "$BIN_DIR/mariadb-win-x64"
+    rm -rf "$BIN_DIR/mariadb-win-x64-temp" "$BIN_DIR/mariadb-win-x64"
+    extract_file "$BIN_DIR/mariadb-win-x64.zip" "$BIN_DIR/mariadb-win-x64-temp"
     rm -f "$BIN_DIR/mariadb-win-x64.zip"
+    mkdir -p "$BIN_DIR/mariadb-win-x64"
+    if [ -d "$BIN_DIR/mariadb-win-x64-temp/mariadb-11.4.5-winx64" ]; then
+        cp -R "$BIN_DIR/mariadb-win-x64-temp/mariadb-11.4.5-winx64/"* "$BIN_DIR/mariadb-win-x64/"
+    else
+        cp -R "$BIN_DIR/mariadb-win-x64-temp/"* "$BIN_DIR/mariadb-win-x64/"
+    fi
+    rm -rf "$BIN_DIR/mariadb-win-x64-temp"
 
     log "=== Windows x64 binaries downloaded ==="
     log "PHP:  $BIN_DIR/php-win-x64/php.exe"
