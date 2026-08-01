@@ -37,9 +37,10 @@ if not exist "%PID_DIR%" mkdir "%PID_DIR%"
 if not exist "%DATA_DIR%\sessions" mkdir "%DATA_DIR%\sessions"
 if not exist "%DATA_DIR%\db" mkdir "%DATA_DIR%\db"
 
-:: Generate forward-slash paths for MariaDB my.ini
+:: Generate forward-slash paths for MariaDB and Caddy
 set "FWD_MARIADB_DIR=%MARIADB_DIR:\=/%"
 set "FWD_DATA_DIR=%DATA_DIR:\=/%"
+set "FWD_APP_DIR=%APP_DIR:\=/%"
 
 :: Create my.ini BEFORE initializing database
 (
@@ -76,17 +77,17 @@ if exist "%PID_DIR%\mariadb.pid" (
 )
 
 :: Initialize MariaDB if needed
-if not exist "%DATA_DIR%\db\ibdata1" (
+if not exist "%DATA_DIR%\db\mysql" (
     echo [%APP_NAME%] Initializing database...
     if exist "%DATA_DIR%\db" rmdir /s /q "%DATA_DIR%\db" 2>NUL
     mkdir "%DATA_DIR%\db"
     
-    if exist "%MARIADB_DIR%\bin\mariadbd.exe" (
-        "%MARIADB_DIR%\bin\mariadbd.exe" --defaults-file="%DATA_DIR%\my.ini" --initialize-insecure > "!LOG_DIR!\db_init.log" 2>&1
-    ) else if exist "%MARIADB_DIR%\bin\mariadb-install-db.exe" (
-        "%MARIADB_DIR%\bin\mariadb-install-db.exe" --defaults-file="%DATA_DIR%\my.ini" > "!LOG_DIR!\db_init.log" 2>&1
+    if exist "%MARIADB_DIR%\bin\mariadb-install-db.exe" (
+        "%MARIADB_DIR%\bin\mariadb-install-db.exe" --datadir="%FWD_DATA_DIR%/db" > "!LOG_DIR!\db_init.log" 2>&1
     ) else if exist "%MARIADB_DIR%\bin\mysql_install_db.exe" (
-        "%MARIADB_DIR%\bin\mysql_install_db.exe" --defaults-file="%DATA_DIR%\my.ini" > "!LOG_DIR!\db_init.log" 2>&1
+        "%MARIADB_DIR%\bin\mysql_install_db.exe" --datadir="%FWD_DATA_DIR%/db" > "!LOG_DIR!\db_init.log" 2>&1
+    ) else if exist "%MARIADB_DIR%\bin\mariadbd.exe" (
+        "%MARIADB_DIR%\bin\mariadbd.exe" --defaults-file="%DATA_DIR%\my.ini" --initialize-insecure > "!LOG_DIR!\db_init.log" 2>&1
     )
     if !errorlevel! neq 0 (
         echo [%APP_NAME%] ERROR: Failed to initialize database.
@@ -165,10 +166,10 @@ echo [%APP_NAME%] PHP ready.
 :: Create Caddyfile
 (
     echo :8080 {
-    echo     root * %APP_DIR%\public
+    echo     root * "%FWD_APP_DIR%/public"
     echo.
     echo     php_fastcgi 127.0.0.1:9000 {
-    echo         root %APP_DIR%\public
+    echo         root "%FWD_APP_DIR%/public"
     echo     }
     echo.
     echo     file_server

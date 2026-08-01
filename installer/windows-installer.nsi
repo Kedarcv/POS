@@ -80,7 +80,13 @@ Section "Install" SecInstall
     ; Copy app files
     DetailPrint "Installing application..."
     SetOutPath "$INSTDIR\app"
-    File /r "..\app\*.*"
+    File /r "..\app"
+    File /r "..\public"
+    File /r "..\system"
+    File /r "..\vendor"
+    File /r "..\stock-data"
+    File "..\spark"
+    File "..\composer.json"
 
     ; Copy launcher
     SetOutPath "$INSTDIR"
