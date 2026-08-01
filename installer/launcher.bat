@@ -37,6 +37,33 @@ if not exist "%PID_DIR%" mkdir "%PID_DIR%"
 if not exist "%DATA_DIR%\sessions" mkdir "%DATA_DIR%\sessions"
 if not exist "%DATA_DIR%\db" mkdir "%DATA_DIR%\db"
 
+:: Generate forward-slash paths for MariaDB my.ini
+set "FWD_MARIADB_DIR=%MARIADB_DIR:\=/%"
+set "FWD_DATA_DIR=%DATA_DIR:\=/%"
+
+:: Create my.ini BEFORE initializing database
+(
+    echo [mysqld]
+    echo port=3307
+    echo basedir="%FWD_MARIADB_DIR%"
+    echo datadir="%FWD_DATA_DIR%/db"
+    echo plugin_dir="%FWD_MARIADB_DIR%/lib/plugin"
+    echo lc-messages-dir="%FWD_MARIADB_DIR%/share"
+    echo socket="%FWD_DATA_DIR%/mariadb.sock"
+    echo skip-name-resolve
+    echo innodb_buffer_pool_size=64M
+    echo innodb_log_file_size=8M
+    echo max_allowed_packet=64M
+    echo character-set-server=utf8mb4
+    echo collation-server=utf8mb4_general_ci
+    echo bind-address=127.0.0.1
+    echo.
+    echo [client]
+    echo port=3307
+    echo socket="%FWD_DATA_DIR%/mariadb.sock"
+    echo default-character-set=utf8mb4
+) > "%DATA_DIR%\my.ini"
+
 :: Check if already running
 if exist "%PID_DIR%\mariadb.pid" (
     set /p PID=<"%PID_DIR%\mariadb.pid"
@@ -51,18 +78,23 @@ if exist "%PID_DIR%\mariadb.pid" (
 :: Initialize MariaDB if needed
 if not exist "%DATA_DIR%\db\ibdata1" (
     echo [%APP_NAME%] Initializing database...
-    if not exist "%DATA_DIR%\db" mkdir "%DATA_DIR%\db"
+    if exist "%DATA_DIR%\db" rmdir /s /q "%DATA_DIR%\db" 2>NUL
+    mkdir "%DATA_DIR%\db"
     
     if exist "%MARIADB_DIR%\bin\mariadbd.exe" (
-        "%MARIADB_DIR%\bin\mariadbd.exe" --initialize-insecure --datadir="%DATA_DIR%\db" --basedir="%MARIADB_DIR%" > "%LOG_DIR%\db_init.log" 2>&1
+        "%MARIADB_DIR%\bin\mariadbd.exe" --defaults-file="%DATA_DIR%\my.ini" --initialize-insecure > "!LOG_DIR!\db_init.log" 2>&1
     ) else if exist "%MARIADB_DIR%\bin\mariadb-install-db.exe" (
-        "%MARIADB_DIR%\bin\mariadb-install-db.exe" --datadir="%DATA_DIR%\db" > "%LOG_DIR%\db_init.log" 2>&1
+        "%MARIADB_DIR%\bin\mariadb-install-db.exe" --defaults-file="%DATA_DIR%\my.ini" > "!LOG_DIR!\db_init.log" 2>&1
     ) else if exist "%MARIADB_DIR%\bin\mysql_install_db.exe" (
-        "%MARIADB_DIR%\bin\mysql_install_db.exe" --datadir="%DATA_DIR%\db" > "%LOG_DIR%\db_init.log" 2>&1
+        "%MARIADB_DIR%\bin\mysql_install_db.exe" --defaults-file="%DATA_DIR%\my.ini" > "!LOG_DIR!\db_init.log" 2>&1
     )
     if !errorlevel! neq 0 (
-        echo [%APP_NAME%] ERROR: Failed to initialize database. See %LOG_DIR%\db_init.log
-        if exist "%LOG_DIR%\db_init.log" type "%LOG_DIR%\db_init.log"
+        echo [%APP_NAME%] ERROR: Failed to initialize database.
+        if exist "!LOG_DIR!\db_init.log" (
+            echo --- Log Output ---
+            type "!LOG_DIR!\db_init.log"
+            echo ------------------
+        )
         pause
         exit /b 1
     )
@@ -76,27 +108,6 @@ if not exist "%DATA_DIR%\.db_pass" (
 
 set /p DB_PASS=<"%DATA_DIR%\.db_pass"
 
-:: Create my.ini
-(
-    echo [mysqld]
-    echo port=3307
-    echo basedir="%MARIADB_DIR%"
-    echo datadir="%DATA_DIR%\db"
-    echo socket="%DATA_DIR%\mariadb.sock"
-    echo skip-name-resolve
-    echo innodb_buffer_pool_size=64M
-    echo innodb_log_file_size=8M
-    echo max_allowed_packet=64M
-    echo character-set-server=utf8mb4
-    echo collation-server=utf8mb4_general_ci
-    echo bind-address=127.0.0.1
-    echo.
-    echo [client]
-    echo port=3307
-    echo socket="%DATA_DIR%\mariadb.sock"
-    echo default-character-set=utf8mb4
-) > "%DATA_DIR%\my.ini"
-
 :: Start MariaDB
 echo [%APP_NAME%] Starting MariaDB on port 3307...
 start /B "" "%MARIADB_DIR%\bin\mariadbd.exe" --defaults-file="%DATA_DIR%\my.ini" --console
@@ -109,6 +120,7 @@ timeout /t 5 /nobreak >NUL
 :: Create user and database
 "%MARIADB_DIR%\bin\mariadb.exe" -u root -e "CREATE DATABASE IF NOT EXISTS beamlink_pos CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;" 2>NUL
 "%MARIADB_DIR%\bin\mariadb.exe" -u root -e "CREATE USER IF NOT EXISTS 'beamlink'@'127.0.0.1' IDENTIFIED BY '%DB_PASS%';" 2>NUL
+"%MARIADB_DIR%\bin\mariadb-admin.exe" -u root reload 2>NUL || "%MARIADB_DIR%\bin\mariadb.exe" -u root -e "FLUSH PRIVILEGES;" 2>NUL
 "%MARIADB_DIR%\bin\mariadb.exe" -u root -e "GRANT ALL PRIVILEGES ON beamlink_pos.* TO 'beamlink'@'127.0.0.1';" 2>NUL
 "%MARIADB_DIR%\bin\mariadb.exe" -u root -e "FLUSH PRIVILEGES;" 2>NUL
 
