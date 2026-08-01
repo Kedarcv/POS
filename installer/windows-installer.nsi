@@ -84,6 +84,7 @@ Section "Install" SecInstall
     File /r "..\public"
     File /r "..\system"
     File /r "..\vendor"
+    File /r "..\writable"
     File /r "..\stock-data"
     File "..\spark"
     File "..\composer.json"

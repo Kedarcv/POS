@@ -40,6 +40,8 @@ error() { echo -e "${RED}[$APP_NAME]${NC} $1"; exit 1; }
 
 # Create directories
 mkdir -p "$DATA_DIR" "$LOG_DIR" "$PID_DIR" "$DATA_DIR/sessions" "$DATA_DIR/stock"
+mkdir -p "$APP_DIR/writable/cache" "$APP_DIR/writable/debugbar" "$APP_DIR/writable/logs" "$APP_DIR/writable/session" "$APP_DIR/writable/uploads" "$APP_DIR/writable/backup"
+chmod -R 777 "$APP_DIR/writable" 2>/dev/null || true
 
 # Check if already running
 check_running() {

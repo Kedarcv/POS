@@ -37,6 +37,15 @@ if not exist "%PID_DIR%" mkdir "%PID_DIR%"
 if not exist "%DATA_DIR%\sessions" mkdir "%DATA_DIR%\sessions"
 if not exist "%DATA_DIR%\db" mkdir "%DATA_DIR%\db"
 
+:: Create CodeIgniter 4 writable directories
+if not exist "%APP_DIR%\writable" mkdir "%APP_DIR%\writable"
+if not exist "%APP_DIR%\writable\cache" mkdir "%APP_DIR%\writable\cache"
+if not exist "%APP_DIR%\writable\debugbar" mkdir "%APP_DIR%\writable\debugbar"
+if not exist "%APP_DIR%\writable\logs" mkdir "%APP_DIR%\writable\logs"
+if not exist "%APP_DIR%\writable\session" mkdir "%APP_DIR%\writable\session"
+if not exist "%APP_DIR%\writable\uploads" mkdir "%APP_DIR%\writable\uploads"
+if not exist "%APP_DIR%\writable\backup" mkdir "%APP_DIR%\writable\backup"
+
 :: Generate forward-slash paths for MariaDB and Caddy
 set "FWD_MARIADB_DIR=%MARIADB_DIR:\=/%"
 set "FWD_DATA_DIR=%DATA_DIR:\=/%"
