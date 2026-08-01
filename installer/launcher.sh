@@ -289,14 +289,7 @@ log "PHP ready."
 # Write Caddyfile
 cat > "$DATA_DIR/Caddyfile" << EOF
 :8080 {
-	root * $APP_DIR/public
-
-	php_fastcgi 127.0.0.1:9000 {
-		root $APP_DIR/public
-	}
-
-	file_server
-	encode gzip
+	reverse_proxy 127.0.0.1:9000
 }
 EOF
 

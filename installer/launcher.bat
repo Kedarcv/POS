@@ -166,14 +166,7 @@ echo [%APP_NAME%] PHP ready.
 :: Create Caddyfile
 (
     echo :8080 {
-    echo     root * "%FWD_APP_DIR%/public"
-    echo.
-    echo     php_fastcgi 127.0.0.1:9000 {
-    echo         root "%FWD_APP_DIR%/public"
-    echo     }
-    echo.
-    echo     file_server
-    echo     encode gzip
+    echo     reverse_proxy 127.0.0.1:9000
     echo }
 ) > "%DATA_DIR%\Caddyfile"
 
