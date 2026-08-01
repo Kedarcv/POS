@@ -50,12 +50,12 @@ if exist "%PID_DIR%\mariadb.pid" (
 :: Initialize MariaDB if needed
 if not exist "%DATA_DIR%\db" (
     echo [%APP_NAME%] Initializing database...
-    if exist "%MARIADB_DIR%\bin\mariadb-install-db.exe" (
-        "%MARIADB_DIR%\bin\mariadb-install-db.exe" --datadir="%DATA_DIR%\db" --basedir="%MARIADB_DIR%"
+    if exist "%MARIADB_DIR%\bin\mariadbd.exe" (
+        "%MARIADB_DIR%\bin\mariadbd.exe" --initialize-insecure --datadir="%DATA_DIR%\db"
+    ) else if exist "%MARIADB_DIR%\bin\mariadb-install-db.exe" (
+        "%MARIADB_DIR%\bin\mariadb-install-db.exe" --datadir="%DATA_DIR%\db"
     ) else if exist "%MARIADB_DIR%\bin\mysql_install_db.exe" (
-        "%MARIADB_DIR%\bin\mysql_install_db.exe" --datadir="%DATA_DIR%\db" --basedir="%MARIADB_DIR%"
-    ) else (
-        "%MARIADB_DIR%\bin\mariadbd.exe" --initialize-insecure --datadir="%DATA_DIR%\db" --basedir="%MARIADB_DIR%"
+        "%MARIADB_DIR%\bin\mysql_install_db.exe" --datadir="%DATA_DIR%\db"
     )
     if !errorlevel! neq 0 (
         echo [%APP_NAME%] ERROR: Failed to initialize database
