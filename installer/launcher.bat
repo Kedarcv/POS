@@ -35,6 +35,7 @@ if not exist "%DATA_DIR%" mkdir "%DATA_DIR%"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 if not exist "%PID_DIR%" mkdir "%PID_DIR%"
 if not exist "%DATA_DIR%\sessions" mkdir "%DATA_DIR%\sessions"
+if not exist "%DATA_DIR%\db" mkdir "%DATA_DIR%\db"
 
 :: Check if already running
 if exist "%PID_DIR%\mariadb.pid" (
@@ -48,17 +49,20 @@ if exist "%PID_DIR%\mariadb.pid" (
 )
 
 :: Initialize MariaDB if needed
-if not exist "%DATA_DIR%\db" (
+if not exist "%DATA_DIR%\db\ibdata1" (
     echo [%APP_NAME%] Initializing database...
+    if not exist "%DATA_DIR%\db" mkdir "%DATA_DIR%\db"
+    
     if exist "%MARIADB_DIR%\bin\mariadbd.exe" (
-        "%MARIADB_DIR%\bin\mariadbd.exe" --initialize-insecure --datadir="%DATA_DIR%\db"
+        "%MARIADB_DIR%\bin\mariadbd.exe" --initialize-insecure --datadir="%DATA_DIR%\db" --basedir="%MARIADB_DIR%" > "%LOG_DIR%\db_init.log" 2>&1
     ) else if exist "%MARIADB_DIR%\bin\mariadb-install-db.exe" (
-        "%MARIADB_DIR%\bin\mariadb-install-db.exe" --datadir="%DATA_DIR%\db"
+        "%MARIADB_DIR%\bin\mariadb-install-db.exe" --datadir="%DATA_DIR%\db" > "%LOG_DIR%\db_init.log" 2>&1
     ) else if exist "%MARIADB_DIR%\bin\mysql_install_db.exe" (
-        "%MARIADB_DIR%\bin\mysql_install_db.exe" --datadir="%DATA_DIR%\db"
+        "%MARIADB_DIR%\bin\mysql_install_db.exe" --datadir="%DATA_DIR%\db" > "%LOG_DIR%\db_init.log" 2>&1
     )
     if !errorlevel! neq 0 (
-        echo [%APP_NAME%] ERROR: Failed to initialize database
+        echo [%APP_NAME%] ERROR: Failed to initialize database. See %LOG_DIR%\db_init.log
+        if exist "%LOG_DIR%\db_init.log" type "%LOG_DIR%\db_init.log"
         pause
         exit /b 1
     )
@@ -72,13 +76,13 @@ if not exist "%DATA_DIR%\.db_pass" (
 
 set /p DB_PASS=<"%DATA_DIR%\.db_pass"
 
-:: Create my.cnf
+:: Create my.ini
 (
     echo [mysqld]
     echo port=3307
-    echo basedir=%MARIADB_DIR%
-    echo datadir=%DATA_DIR%\db
-    echo socket=%DATA_DIR%\mariadb.sock
+    echo basedir="%MARIADB_DIR%"
+    echo datadir="%DATA_DIR%\db"
+    echo socket="%DATA_DIR%\mariadb.sock"
     echo skip-name-resolve
     echo innodb_buffer_pool_size=64M
     echo innodb_log_file_size=8M
@@ -89,7 +93,7 @@ set /p DB_PASS=<"%DATA_DIR%\.db_pass"
     echo.
     echo [client]
     echo port=3307
-    echo socket=%DATA_DIR%\mariadb.sock
+    echo socket="%DATA_DIR%\mariadb.sock"
     echo default-character-set=utf8mb4
 ) > "%DATA_DIR%\my.ini"
 
