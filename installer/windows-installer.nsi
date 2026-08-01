@@ -27,7 +27,7 @@ RequestExecutionLevel admin
 !define MUI_UNICON "assets\icon.ico"
 !define MUI_WELCOMEPAGE_TITLE "Welcome to ${APP_NAME} Setup"
 !define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of ${APP_NAME} ${APP_VERSION}.$\r$\n$\r$\nThe installer will bundle:${\n}- PHP 8.2 (no installation needed)$\r$\n- MariaDB (database server)$\r$\n- Caddy (web server)$\r$\n$\r$\nClick Next to continue."
-!define MUI_FINISHPAGE_RUN "$INSTDIR\BeamLink POS.exe"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\launcher.bat"
 !define MUI_FINISHPAGE_RUN_TEXT "Launch ${APP_NAME}"
 !define MUI_FINISHPAGE_LINK "Visit our website"
 !define MUI_FINISHPAGE_LINK_LOCATION "${APP_URL}"
@@ -94,66 +94,18 @@ Section "Install" SecInstall
     SetOutPath "$INSTDIR\config"
     File "config\.env.example"
 
-    ; Create launcher executable (batch wrapper)
-    FileOpen $0 "$INSTDIR\BeamLink POS.exe" w
-    FileWrite $0 '@echo off$\r$\n'
-    FileWrite $0 'cd /d "$INSTDIR"$\r$\n'
-    FileWrite $0 'call launcher.bat$\r$\n'
-    FileClose $0
-
-    ; Initialize MariaDB
-    DetailPrint "Initializing database..."
-    nsExec::ExecToLog '"$INSTDIR\mariadb\bin\mariadb-install-db.exe" --datadir="$DATA_DIR\db" --basedir="$INSTDIR\mariadb"'
-
-    ; Start MariaDB temporarily
-    DetailPrint "Starting MariaDB for setup..."
-    nsExec::ExecToLog '"$INSTDIR\mariadb\bin\mariadbd.exe" --defaults-file="$INSTDIR\mariadb\my.ini" --console'
-
-    ; Wait for MariaDB
-    Sleep 5000
-
-    ; Create database and user
-    DetailPrint "Creating database..."
-    nsExec::ExecToLog '"$INSTDIR\mariadb\bin\mariadb.exe" -u root -e "CREATE DATABASE IF NOT EXISTS beamlink_pos CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"'
-    nsExec::ExecToLog '"$INSTDIR\mariadb\bin\mariadb.exe" -u root -e "CREATE USER IF NOT EXISTS '\''beamlink'\''@'\''127.0.0.1'\'' IDENTIFIED BY '\''beamlink_secure_pw'\'';"'
-    nsExec::ExecToLog '"$INSTDIR\mariadb\bin\mariadb.exe" -u root -e "GRANT ALL PRIVILEGES ON beamlink_pos.* TO '\''beamlink'\''@'\''127.0.0.1'\'';"'
-    nsExec::ExecToLog '"$INSTDIR\mariadb\bin\mariadb.exe" -u root -e "FLUSH PRIVILEGES;"'
-
-    ; Stop MariaDB
-    nsExec::ExecToLog '"$INSTDIR\mariadb\bin\mariadb.exe" -u root -e "SHUTDOWN;"'
-
-    ; Create .env
-    DetailPrint "Creating configuration..."
-    FileOpen $0 "$INSTDIR\.env" w
-    FileWrite $0 'CI_ENVIRONMENT = production$\r$\n'
-    FileWrite $0 'app.baseURL = http://localhost:8080$\r$\n'
-    FileWrite $0 '$\r$\n'
-    FileWrite $0 'database.default.hostname = 127.0.0.1$\r$\n'
-    FileWrite $0 'database.default.database = beamlink_pos$\r$\n'
-    FileWrite $0 'database.default.username = beamlink$\r$\n'
-    FileWrite $0 'database.default.password = beamlink_secure_pw$\r$\n'
-    FileWrite $0 'database.default.DBPrefix = ospos_$\r$\n'
-    FileWrite $0 'database.default.port = 3307$\r$\n'
-    FileWrite $0 '$\r$\n'
-    FileWrite $0 'appTimezone = Africa/Harare$\r$\n'
-    FileWrite $0 'BEAMLINK_API_URL = https://beamlink-erp.vercel.app$\r$\n'
-    FileWrite $0 'BEAMLINK_API_KEY = beamlink-pos-local-2026$\r$\n'
-    FileWrite $0 'WHATSAPP_TOKEN = EAAHQnEhuTywB...$\r$\n'
-    FileWrite $0 'WHATSAPP_PHONE_NUMBER_ID = 1122313694297443$\r$\n'
-    FileWrite $0 'WHATSAPP_BUSINESS_ACCOUNT_ID = 998404866041041$\r$\n'
-    FileWrite $0 'WHATSAPP_VERIFY_TOKEN = beamlink-erp-webhook-2026$\r$\n'
-    FileWrite $0 'WHATSAPP_BOT_NUMBER = +263717174443$\r$\n'
-    FileWrite $0 'WHATSAPP_WEBHOOK_URL = http://localhost:8080/webhook/whatsapp$\r$\n'
-    FileWrite $0 'OSPOS_WEBHOOK_SECRET = beamlink-webhook-2026$\r$\n'
-    FileClose $0
+    ; Copy assets (icon)
+    SetOutPath "$INSTDIR\assets"
+    File "assets\icon.ico"
+    File "assets\icon.png"
 
     ; Create Start Menu shortcuts
     CreateDirectory "$SMPROGRAMS\${APP_NAME}"
-    CreateShortCut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\BeamLink POS.exe"
+    CreateShortCut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\launcher.bat" "" "$INSTDIR\assets\icon.ico"
     CreateShortCut "$SMPROGRAMS\${APP_NAME}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
 
     ; Create Desktop shortcut
-    CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\BeamLink POS.exe"
+    CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\launcher.bat" "" "$INSTDIR\assets\icon.ico"
 
     ; Store uninstaller
     WriteUninstaller "$INSTDIR\Uninstall.exe"
