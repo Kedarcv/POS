@@ -54,12 +54,10 @@
             "installer/bin/php/**/*"
         ],
         "win": {
-            "target": "nsis",
-            "icon": "installer/assets/icon.ico"
+            "target": "nsis"
         },
         "mac": {
-            "target": "dmg",
-            "icon": "installer/assets/icon.icns"
+            "target": "dmg"
         }
     },
     "dependencies": {
