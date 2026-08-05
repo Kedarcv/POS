@@ -111,12 +111,8 @@ if not exist "%DATA_DIR%\db\mysql" (
     echo [%APP_NAME%] Database initialized.
 )
 
-:: Generate DB password if not exists
-if not exist "%DATA_DIR%\.db_pass" (
-    powershell -Command "[System.Guid]::NewGuid().ToString('N')" > "%DATA_DIR%\.db_pass"
-)
-
-set /p DB_PASS=<"%DATA_DIR%\.db_pass"
+:: DB credentials for local POS instance
+set "DB_PASS=pointofsale"
 
 :: Start MariaDB
 echo [%APP_NAME%] Starting MariaDB on port 3307...
@@ -128,10 +124,10 @@ echo [%APP_NAME%] Waiting for MariaDB...
 timeout /t 5 /nobreak >NUL
 
 :: Create user and database
-"%MARIADB_DIR%\bin\mariadb.exe" -u root -e "CREATE DATABASE IF NOT EXISTS beamlink_pos CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;" 2>NUL
-"%MARIADB_DIR%\bin\mariadb.exe" -u root -e "CREATE USER IF NOT EXISTS 'beamlink'@'127.0.0.1' IDENTIFIED BY '%DB_PASS%';" 2>NUL
+"%MARIADB_DIR%\bin\mariadb.exe" -u root -e "CREATE DATABASE IF NOT EXISTS ospos CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;" 2>NUL
+"%MARIADB_DIR%\bin\mariadb.exe" -u root -e "CREATE USER IF NOT EXISTS 'admin'@'127.0.0.1' IDENTIFIED BY '%DB_PASS%';" 2>NUL
 "%MARIADB_DIR%\bin\mariadb-admin.exe" -u root reload 2>NUL || "%MARIADB_DIR%\bin\mariadb.exe" -u root -e "FLUSH PRIVILEGES;" 2>NUL
-"%MARIADB_DIR%\bin\mariadb.exe" -u root -e "GRANT ALL PRIVILEGES ON beamlink_pos.* TO 'beamlink'@'127.0.0.1';" 2>NUL
+"%MARIADB_DIR%\bin\mariadb.exe" -u root -e "GRANT ALL PRIVILEGES ON ospos.* TO 'admin'@'127.0.0.1';" 2>NUL
 "%MARIADB_DIR%\bin\mariadb.exe" -u root -e "FLUSH PRIVILEGES;" 2>NUL
 
 echo [%APP_NAME%] MariaDB ready.

@@ -105,12 +105,8 @@ if [ ! -d "$DATA_DIR/db" ] || [ ! -f "$DATA_DIR/db/ibdata1" ]; then
     log "Database initialized."
 fi
 
-# Generate DB password if not exists
-if [ ! -f "$DATA_DIR/.db_pass" ]; then
-    openssl rand -hex 16 > "$DATA_DIR/.db_pass"
-    chmod 600 "$DATA_DIR/.db_pass"
-fi
-DB_PASS=$(cat "$DATA_DIR/.db_pass")
+# Set DB password for local POS instance
+DB_PASS="pointofsale"
 
 # Write my.cnf
 cat > "$DATA_DIR/my.cnf" << EOF
@@ -161,11 +157,11 @@ done
 "$MYSQL_BIN/mysql" \
     --socket="$DATA_DIR/mysql.sock" \
     -u root << EOSQL
-CREATE DATABASE IF NOT EXISTS beamlink_pos CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-CREATE USER IF NOT EXISTS 'beamlink'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';
-CREATE USER IF NOT EXISTS 'beamlink'@'localhost' IDENTIFIED BY '$DB_PASS';
-GRANT ALL PRIVILEGES ON beamlink_pos.* TO 'beamlink'@'127.0.0.1';
-GRANT ALL PRIVILEGES ON beamlink_pos.* TO 'beamlink'@'localhost';
+CREATE DATABASE IF NOT EXISTS ospos CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+CREATE USER IF NOT EXISTS 'admin'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';
+CREATE USER IF NOT EXISTS 'admin'@'localhost' IDENTIFIED BY '$DB_PASS';
+GRANT ALL PRIVILEGES ON ospos.* TO 'admin'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON ospos.* TO 'admin'@'localhost';
 FLUSH PRIVILEGES;
 EOSQL
 

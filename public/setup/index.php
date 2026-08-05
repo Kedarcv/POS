@@ -75,27 +75,24 @@ function runCmd($cmd, &$output = null, &$returnCode = null) {
 
 // Auto-process Step 2 (Database Connection)
 if ($step === 2 && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-    $dbPass = '';
-    if (file_exists($DATA_DIR . '/.db_pass')) {
-        $dbPass = trim(file_get_contents($DATA_DIR . '/.db_pass'));
-    }
+    $dbPass = 'pointofsale';
     
     try {
         $dsn = "mysql:host=127.0.0.1;port=3307";
-        $pdo = new PDO($dsn, 'beamlink', $dbPass, [
+        $pdo = new PDO($dsn, 'admin', $dbPass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         ]);
         
-        $pdo->exec("CREATE DATABASE IF NOT EXISTS `beamlink_pos` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-        $pdo->exec("USE `beamlink_pos`");
+        $pdo->exec("CREATE DATABASE IF NOT EXISTS `ospos` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+        $pdo->exec("USE `ospos`");
         
         session_start();
         $_SESSION['setup'] = [
             'db_host' => '127.0.0.1',
             'db_port' => 3307,
-            'db_user' => 'beamlink',
+            'db_user' => 'admin',
             'db_pass' => $dbPass,
-            'db_name' => 'beamlink_pos',
+            'db_name' => 'ospos',
         ];
         
         $step = 3;
@@ -114,9 +111,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Test database connection
             $dbHost = trim($_POST['db_host'] ?? '127.0.0.1');
             $dbPort = (int)($_POST['db_port'] ?? 3307);
-            $dbUser = trim($_POST['db_user'] ?? 'beamlink');
-            $dbPass = trim($_POST['db_pass'] ?? '');
-            $dbName = trim($_POST['db_name'] ?? 'beamlink_pos');
+            $dbUser = trim($_POST['db_user'] ?? 'admin');
+            $dbPass = trim($_POST['db_pass'] ?? 'pointofsale');
+            $dbName = trim($_POST['db_name'] ?? 'ospos');
 
             try {
                 $dsn = "mysql:host={$dbHost};port={$dbPort}";
@@ -190,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $envContent
             );
             $envContent = str_replace(
-                "database.default.hostname = 'localhost'",
+                "database.default.hostname = '127.0.0.1'",
                 "database.default.hostname = '" . addslashes($setup['db_host']) . "'",
                 $envContent
             );
@@ -205,17 +202,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $envContent
             );
             $envContent = str_replace(
-                "encryption.key = ''",
+                "encryption.key = 'e29053f860954962cadb2addb51f474c99fe391845460fdd31bebca265447ae2'",
                 "encryption.key = '" . $encryptionKey . "'",
                 $envContent
             );
 
+            // Webhook secret is generated and appended if not present
             $webhookSecret = bin2hex(random_bytes(16));
-            $envContent = str_replace(
-                "OSPOS_WEBHOOK_SECRET = 'CHANGE_ME_WEBHOOK'",
-                "OSPOS_WEBHOOK_SECRET = '" . $webhookSecret . "'",
-                $envContent
-            );
+            if (strpos($envContent, 'OSPOS_WEBHOOK_SECRET') !== false) {
+                $envContent = preg_replace('/OSPOS_WEBHOOK_SECRET\s*=\s*.*/', "OSPOS_WEBHOOK_SECRET = '" . $webhookSecret . "'", $envContent);
+            } else {
+                $envContent .= "\nOSPOS_WEBHOOK_SECRET = '" . $webhookSecret . "'\n";
+            }
+            if (strpos($envContent, 'appTimezone') === false) {
+                $envContent .= "appTimezone = 'Africa/Harare'\n";
+            }
 
             file_put_contents($ENV_TARGET, $envContent);
 
@@ -446,16 +447,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="form-group">
                         <label>Database Name</label>
-                        <input type="text" name="db_name" value="beamlink_pos" required>
+                        <input type="text" name="db_name" value="ospos" required>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>DB Username</label>
-                            <input type="text" name="db_user" value="beamlink" required>
+                            <input type="text" name="db_user" value="admin" required>
                         </div>
                         <div class="form-group">
                             <label>DB Password</label>
-                            <input type="password" name="db_pass" value="" placeholder="Enter DB password">
+                            <input type="password" name="db_pass" value="pointofsale" placeholder="Enter DB password">
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary">Test Connection & Continue</button>
