@@ -28,7 +28,9 @@
         "build": "gulp default",
         "gulp": "gulp",
         "electron:start": "electron .",
-        "electron:dist": "electron-builder --win --mac"
+        "electron:dist": "electron-builder --win --mac",
+        "electron:build-win": "electron-builder --win",
+        "electron:build-mac": "electron-builder --mac"
     },
     "build": {
         "appId": "com.beamlink.pos",

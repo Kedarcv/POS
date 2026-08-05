@@ -43,7 +43,7 @@ jobs:
           ./download-binaries.sh windows
 
       - name: Build Electron App
-        run: npm run electron:dist
+        run: npm run electron:build-win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

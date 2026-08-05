@@ -1,0 +1,55 @@
+name: Build Mac Installer Package
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-mac-installer:
+    name: Build Mac Desktop Installer (.dmg)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, pdo_mysql, gd, zip, mbstring, curl, openssl, intl, fileinfo, bcmath, ctype
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install PHP Dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Install Node Dependencies & Build Assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Download Bundled Binaries (PHP, MariaDB, Caddy)
+        shell: bash
+        run: |
+          cd installer
+          chmod +x download-binaries.sh
+          ./download-binaries.sh mac
+
+      - name: Build Electron App
+        run: npm run electron:build-mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Mac Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BeamLink-POS-Mac-Installer
+          path: dist/electron/*.dmg
+          if-no-files-found: error
