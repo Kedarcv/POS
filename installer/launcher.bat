@@ -154,6 +154,7 @@ if not exist "%INSTALL_DIR%.env" (
     echo error_log = %LOG_DIR%\php_error.log
     echo session.save_path = %DATA_DIR%\sessions
     echo date.timezone = Africa/Harare
+    echo extension_dir = "%PHP_DIR%\ext"
     echo extension=mysqli
     echo extension=pdo_mysql
     echo extension=gd
