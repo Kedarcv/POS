@@ -120,6 +120,20 @@ elif [ "$PLATFORM" = "windows" ]; then
         "$BIN_DIR/php-win-x64.zip"
     extract_file "$BIN_DIR/php-win-x64.zip" "$BIN_DIR/php-win-x64"
     rm -f "$BIN_DIR/php-win-x64.zip"
+    
+    log "Configuring PHP php.ini..."
+    cp "$BIN_DIR/php-win-x64/php.ini-production" "$BIN_DIR/php-win-x64/php.ini"
+    # Enable extensions directory (Windows uses extension_dir = "ext")
+    sed -i 's/; extension_dir = "ext"/extension_dir = "ext"/g' "$BIN_DIR/php-win-x64/php.ini"
+    # Enable required extensions
+    sed -i 's/;extension=curl/extension=curl/g' "$BIN_DIR/php-win-x64/php.ini"
+    sed -i 's/;extension=fileinfo/extension=fileinfo/g' "$BIN_DIR/php-win-x64/php.ini"
+    sed -i 's/;extension=gd/extension=gd/g' "$BIN_DIR/php-win-x64/php.ini"
+    sed -i 's/;extension=intl/extension=intl/g' "$BIN_DIR/php-win-x64/php.ini"
+    sed -i 's/;extension=mbstring/extension=mbstring/g' "$BIN_DIR/php-win-x64/php.ini"
+    sed -i 's/;extension=mysqli/extension=mysqli/g' "$BIN_DIR/php-win-x64/php.ini"
+    sed -i 's/;extension=pdo_mysql/extension=pdo_mysql/g' "$BIN_DIR/php-win-x64/php.ini"
+    sed -i 's/;extension=zip/extension=zip/g' "$BIN_DIR/php-win-x64/php.ini"
 
     # Caddy
     log "--- Caddy ---"
