@@ -55,6 +55,14 @@ class Paths
      */
     public string $writableDirectory = __DIR__ . '/../../writable';
 
+    public function __construct()
+    {
+        if (getenv('OSPOS_DATA_DIR')) {
+            $this->writableDirectory = getenv('OSPOS_DATA_DIR') . '/writable';
+            $this->envDirectory = getenv('OSPOS_DATA_DIR');
+        }
+    }
+
     /**
      * ---------------------------------------------------------------
      * TESTS DIRECTORY NAME

@@ -22,11 +22,43 @@
     "files": [
         "dist/opensourcepos.$version.tgz"
     ],
-    "type": "module",
-    "main": "index.php",
+    "type": "commonjs",
+    "main": "electron/main.js",
     "scripts": {
         "build": "gulp default",
-        "gulp": "gulp"
+        "gulp": "gulp",
+        "electron:start": "electron .",
+        "electron:dist": "electron-builder --win --mac"
+    },
+    "build": {
+        "appId": "com.beamlink.pos",
+        "productName": "BeamLink POS",
+        "directories": {
+            "output": "dist/electron"
+        },
+        "files": [
+            "electron/**/*",
+            "package.json"
+        ],
+        "extraResources": [
+            "app/**/*",
+            "public/**/*",
+            "vendor/**/*",
+            "system/**/*",
+            "writable/**/*",
+            ".env.example",
+            "spark",
+            "installer/bin/mariadb/**/*",
+            "installer/bin/php/**/*"
+        ],
+        "win": {
+            "target": "nsis",
+            "icon": "installer/assets/icon.ico"
+        },
+        "mac": {
+            "target": "dmg",
+            "icon": "installer/assets/icon.icns"
+        }
     },
     "dependencies": {
         "bootstrap": "^3.4.1",
@@ -52,6 +84,7 @@
         "elegant-circles": "github:opensourcepos/elegant-circles#minified",
         "es6-promise": "^4.2.8",
         "file-saver": "^2.0.5",
+        "get-port": "^7.2.0",
         "html2canvas": "^1.4.1",
         "jasny-bootstrap": "^3.1.3",
         "jquery": "^3.7.1",
@@ -60,9 +93,13 @@
         "jquery-validation": "^1.19.5",
         "jspdf": "^4.2.1",
         "jspdf-autotable": "^5.0.7",
-        "tableexport.jquery.plugin": "^1.30.0"
+        "tableexport.jquery.plugin": "^1.30.0",
+        "tree-kill": "^1.2.2",
+        "wait-on": "^9.1.0"
     },
     "devDependencies": {
+        "electron": "^43.3.0",
+        "electron-builder": "^26.15.3",
         "gulp": "^5.0.1",
         "gulp-clean": "^0.4.0",
         "gulp-clean-css": "^4.3.0",

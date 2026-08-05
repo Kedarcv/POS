@@ -7,13 +7,13 @@
 $INSTALL_DIR = dirname(dirname(dirname(__DIR__)));
 
 $APP_DIR = $INSTALL_DIR . '/app';
-$DATA_DIR = $INSTALL_DIR . '/data';
+$DATA_DIR = getenv('OSPOS_DATA_DIR') ?: $INSTALL_DIR . '/data';
 $STOCK_FILE = $APP_DIR . '/stock-data/STOCK.XLS';
 $LOG_DIR = $DATA_DIR . '/logs';
 
-// CodeIgniter .env needs to be in $APP_DIR because $envDirectory resolves there
+// CodeIgniter .env needs to be in the envDirectory
 $ENV_SOURCE = $INSTALL_DIR . '/.env.example';
-$ENV_TARGET = $APP_DIR . '/.env';
+$ENV_TARGET = getenv('OSPOS_DATA_DIR') ? getenv('OSPOS_DATA_DIR') . '/.env' : $APP_DIR . '/.env';
 
 // Find PHP binary
 $phpBinary = null;

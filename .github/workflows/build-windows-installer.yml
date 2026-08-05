@@ -42,18 +42,14 @@ jobs:
           chmod +x download-binaries.sh
           ./download-binaries.sh windows
 
-      - name: Install NSIS
-        run: choco install nsis -y --no-progress
-
-      - name: Build Windows Installer with NSIS
-        shell: cmd
-        run: |
-          cd installer
-          "C:\Program Files (x86)\NSIS\makensis.exe" windows-installer.nsi
+      - name: Build Electron App
+        run: npm run electron:dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows Installer Artifact
         uses: actions/upload-artifact@v4
         with:
           name: BeamLink-POS-Windows-Installer
-          path: installer/BeamLink-POS-*-windows-x64.exe
+          path: dist/electron/*.exe
           if-no-files-found: error
