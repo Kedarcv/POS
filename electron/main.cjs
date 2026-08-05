@@ -43,8 +43,8 @@ function ensureDirectories() {
 function startDatabase() {
     return new Promise((resolve, reject) => {
         const myIniPath = path.join(dataDir, 'my.ini');
-        const mariadbdPath = path.join(mariadbDir, 'bin', process.platform === 'win32' ? 'mariadbd.exe' : 'mariadbd');
-        const mariadbPath = path.join(mariadbDir, 'bin', process.platform === 'win32' ? 'mariadb.exe' : 'mariadb');
+        const mariadbdPath = path.join(mariadbDir, 'bin', process.platform === 'win32' ? 'mariadbd.exe' : 'mysqld');
+        const mariadbPath = path.join(mariadbDir, 'bin', process.platform === 'win32' ? 'mariadb.exe' : 'mysql');
 
         // Forward slashes for MySQL paths
         const fwdDataDir = dataDir.replace(/\\/g, '/');
@@ -69,10 +69,10 @@ function startDatabase() {
             let initCmd = mariadbdPath;
             let initArgs = ['--defaults-file=' + myIniPath, '--initialize-insecure'];
             
-            // on macOS/Linux we use mariadb-install-db
+            // on macOS/Linux we use mysql_install_db (since it comes from Homebrew mysql)
             if (process.platform !== 'win32') {
-                initCmd = path.join(mariadbDir, 'bin', 'mariadb-install-db');
-                initArgs = ['--datadir=' + dbDir];
+                initCmd = path.join(mariadbDir, 'bin', 'mysql_install_db');
+                initArgs = ['--datadir=' + dbDir, '--basedir=' + mariadbDir];
             }
 
             const initProcess = spawn(initCmd, initArgs);
