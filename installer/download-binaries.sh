@@ -132,6 +132,7 @@ elif [ "$PLATFORM" = "windows" ]; then
     sed -i 's/;extension=intl/extension=intl/g' "$BIN_DIR/php-win-x64/php.ini"
     sed -i 's/;extension=mbstring/extension=mbstring/g' "$BIN_DIR/php-win-x64/php.ini"
     sed -i 's/;extension=mysqli/extension=mysqli/g' "$BIN_DIR/php-win-x64/php.ini"
+    sed -i 's/;extension=openssl/extension=openssl/g' "$BIN_DIR/php-win-x64/php.ini"
     sed -i 's/;extension=pdo_mysql/extension=pdo_mysql/g' "$BIN_DIR/php-win-x64/php.ini"
     sed -i 's/;extension=zip/extension=zip/g' "$BIN_DIR/php-win-x64/php.ini"
 
