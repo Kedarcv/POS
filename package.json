@@ -22,8 +22,8 @@
     "files": [
         "dist/opensourcepos.$version.tgz"
     ],
-    "type": "commonjs",
-    "main": "electron/main.js",
+    "type": "module",
+    "main": "electron/main.cjs",
     "scripts": {
         "build": "gulp default",
         "gulp": "gulp",
