@@ -4,28 +4,16 @@
  * First-run configuration for native installers
  */
 
-// Determine install directory (works for both Mac .app and direct install)
-$possiblePaths = [
-    dirname(__DIR__),                           // Direct install
-    dirname(dirname(__DIR__)) . '/Resources',   // Mac .app bundle
-];
-
-$INSTALL_DIR = null;
-foreach ($possiblePaths as $path) {
-    if (is_dir($path . '/app')) {
-        $INSTALL_DIR = $path;
-        break;
-    }
-}
-
-if (!$INSTALL_DIR) {
-    $INSTALL_DIR = dirname(__DIR__);
-}
+$INSTALL_DIR = dirname(dirname(dirname(__DIR__)));
 
 $APP_DIR = $INSTALL_DIR . '/app';
 $DATA_DIR = $INSTALL_DIR . '/data';
 $STOCK_FILE = $APP_DIR . '/stock-data/STOCK.XLS';
 $LOG_DIR = $DATA_DIR . '/logs';
+
+// CodeIgniter .env needs to be in $APP_DIR because $envDirectory resolves there
+$ENV_SOURCE = $INSTALL_DIR . '/.env.example';
+$ENV_TARGET = $APP_DIR . '/.env';
 
 // Find PHP binary
 $phpBinary = null;
@@ -83,6 +71,38 @@ $log = [];
 function runCmd($cmd, &$output = null, &$returnCode = null) {
     exec($cmd . ' 2>&1', $output, $returnCode);
     return $returnCode === 0;
+}
+
+// Auto-process Step 2 (Database Connection)
+if ($step === 2 && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $dbPass = '';
+    if (file_exists($DATA_DIR . '/.db_pass')) {
+        $dbPass = trim(file_get_contents($DATA_DIR . '/.db_pass'));
+    }
+    
+    try {
+        $dsn = "mysql:host=127.0.0.1;port=3307";
+        $pdo = new PDO($dsn, 'beamlink', $dbPass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        ]);
+        
+        $pdo->exec("CREATE DATABASE IF NOT EXISTS `beamlink_pos` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+        $pdo->exec("USE `beamlink_pos`");
+        
+        session_start();
+        $_SESSION['setup'] = [
+            'db_host' => '127.0.0.1',
+            'db_port' => 3307,
+            'db_user' => 'beamlink',
+            'db_pass' => $dbPass,
+            'db_name' => 'beamlink_pos',
+        ];
+        
+        $step = 3;
+    } catch (PDOException $e) {
+        $error = "Auto-Database connection failed: " . $e->getMessage();
+        // Fall through to manual step 2 if auto fails
+    }
 }
 
 // Handle form submissions
@@ -162,50 +182,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $encryptionKey = bin2hex(random_bytes(32));
 
             // Write .env file
-            $envContent = file_get_contents($INSTALL_DIR . '/config/.env.example');
-            $envContent = str_replace('CHANGE_ME_ON_INSTALL', $setup['db_pass'], $envContent);
+            $envContent = file_get_contents($ENV_SOURCE);
+            $envContent = str_replace('pointofsale', $setup['db_pass'], $envContent);
             $envContent = str_replace(
-                "database.default.password = 'CHANGE_ME_ON_INSTALL'",
+                "database.default.password = 'pointofsale'",
                 "database.default.password = '" . addslashes($setup['db_pass']) . "'",
                 $envContent
             );
             $envContent = str_replace(
-                "database.default.hostname = '127.0.0.1'",
+                "database.default.hostname = 'localhost'",
                 "database.default.hostname = '" . addslashes($setup['db_host']) . "'",
                 $envContent
             );
             $envContent = str_replace(
-                "database.default.port = 3307",
-                "database.default.port = " . $setup['db_port'],
-                $envContent
-            );
-            $envContent = str_replace(
-                "database.default.database = 'beamlink_pos'",
+                "database.default.database = 'ospos'",
                 "database.default.database = '" . addslashes($setup['db_name']) . "'",
                 $envContent
             );
             $envContent = str_replace(
-                "database.default.username = 'beamlink'",
+                "database.default.username = 'admin'",
                 "database.default.username = '" . addslashes($setup['db_user']) . "'",
                 $envContent
             );
             $envContent = str_replace(
-                "encryption.key = 'CHANGE_ME_ON_INSTALL'",
+                "encryption.key = ''",
                 "encryption.key = '" . $encryptionKey . "'",
                 $envContent
             );
 
             $webhookSecret = bin2hex(random_bytes(16));
             $envContent = str_replace(
-                "OSPOS_WEBHOOK_SECRET = 'beamlink-webhook-2026'",
+                "OSPOS_WEBHOOK_SECRET = 'CHANGE_ME_WEBHOOK'",
                 "OSPOS_WEBHOOK_SECRET = '" . $webhookSecret . "'",
                 $envContent
             );
 
-            file_put_contents($INSTALL_DIR . '/.env', $envContent);
-
-            // Copy .env to app root (CI4 reads from there)
-            copy($INSTALL_DIR . '/.env', $APP_DIR . '/.env');
+            file_put_contents($ENV_TARGET, $envContent);
 
             // Ensure data directories exist
             @mkdir($DATA_DIR, 0755, true);
@@ -216,7 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $migrationLog = [];
             if ($phpBinary) {
                 chdir($APP_DIR);
-                $cmd = escapeshellarg($phpBinary) . ' spark migrate --all 2>&1';
+                $cmd = '"' . $phpBinary . '" spark migrate --all 2>&1';
                 exec($cmd, $migrationLog, $migrationReturn);
                 $log['migrations'] = $migrationReturn === 0 ? 'success' : 'failed';
                 $log['migrations_output'] = implode("\n", array_slice($migrationLog, -20));
@@ -228,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($phpBinary && file_exists($STOCK_FILE)) {
                 $seedLog = [];
                 chdir($APP_DIR);
-                $cmd = escapeshellarg($phpBinary) . ' spark stock:import 2>&1';
+                $cmd = '"' . $phpBinary . '" spark stock:import 2>&1';
                 exec($cmd, $seedLog, $seedReturn);
                 $log['stock'] = $seedReturn === 0 ? 'success' : 'failed';
                 $log['stock_output'] = implode("\n", array_slice($seedLog, -10));

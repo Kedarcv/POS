@@ -93,13 +93,9 @@ Section "Install" SecInstall
     SetOutPath "$INSTDIR"
     File "launcher.bat"
 
-    ; Copy setup wizard
-    SetOutPath "$INSTDIR\setup"
-    File "setup\index.php"
-
     ; Copy config
     SetOutPath "$INSTDIR\config"
-    File "config\.env.example"
+    File "..\.env.example"
 
     ; Copy assets (icon)
     SetOutPath "$INSTDIR\assets"

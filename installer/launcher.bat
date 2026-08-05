@@ -136,10 +136,8 @@ timeout /t 5 /nobreak >NUL
 
 echo [%APP_NAME%] MariaDB ready.
 
-:: Create .env if it doesn't exist
-if not exist "%INSTALL_DIR%.env" (
-    powershell -Command "$secret = -join ((1..32) | ForEach-Object { '{0:x}' -f (Get-Random -Max 16) }); Set-Content -Path '%INSTALL_DIR%.env' -Value @(\"CI_ENVIRONMENT = 'production'\", \"app.baseURL = 'http://localhost:%PORT%'\", \"\", \"database.default.hostname = 127.0.0.1\", \"database.default.database = beamlink_pos\", \"database.default.username = beamlink\", \"database.default.password = %DB_PASS%\", \"database.default.DBPrefix = 'ospos_'\", \"database.default.port = 3307\", \"\", \"appTimezone = 'Africa/Harare'\", \"BEAMLINK_API_URL = https://beamlink-erp.vercel.app\", \"BEAMLINK_API_KEY = beamlink-pos-local-2026\", \"WHATSAPP_TOKEN = EAAHQnEhuTywB...\", \"WHATSAPP_PHONE_NUMBER_ID = 1122313694297443\", \"WHATSAPP_BUSINESS_ACCOUNT_ID = 998404866041041\", \"WHATSAPP_VERIFY_TOKEN = beamlink-erp-webhook-2026\", \"WHATSAPP_BOT_NUMBER = +263717174443\", \"WHATSAPP_WEBHOOK_URL = http://localhost:%PORT%/webhook/whatsapp\", \"OSPOS_WEBHOOK_SECRET = $secret\")"
-)
+:: Create CodeIgniter 4 configuration if needed
+:: (Setup wizard handles this now, but we just ensure the DB pass is ready)
 
 :: Create php.ini
 (
@@ -192,7 +190,7 @@ timeout /t 3 /nobreak >NUL
 :: Check if first run
 if not exist "%DATA_DIR%\.installed" (
     echo [%APP_NAME%] First run detected - opening setup wizard...
-    start http://localhost:%PORT%/setup
+    start http://localhost:%PORT%/setup/
 ) else (
     echo [%APP_NAME%] Running at http://localhost:%PORT%
     start http://localhost:%PORT%
@@ -204,20 +202,13 @@ pause >NUL
 
 :: Stop services
 echo [%APP_NAME%] Stopping services...
-if exist "%PID_DIR%\caddy.pid" (
-    set /p PID=<"%PID_DIR%\caddy.pid"
-    taskkill /PID !PID! /T /F >NUL 2>&1
-    del "%PID_DIR%\caddy.pid"
-)
-if exist "%PID_DIR%\php.pid" (
-    set /p PID=<"%PID_DIR%\php.pid"
-    taskkill /PID !PID! /T /F >NUL 2>&1
-    del "%PID_DIR%\php.pid"
-)
-if exist "%PID_DIR%\mariadb.pid" (
-    set /p PID=<"%PID_DIR%\mariadb.pid"
-    taskkill /PID !PID! /T /F >NUL 2>&1
-    del "%PID_DIR%\mariadb.pid"
-)
+FOR /F "tokens=5" %%a IN ('netstat -aon ^| find ":8080" ^| find "LISTENING"') DO taskkill /PID %%a /F /T >NUL 2>&1
+FOR /F "tokens=5" %%a IN ('netstat -aon ^| find ":9000" ^| find "LISTENING"') DO taskkill /PID %%a /F /T >NUL 2>&1
+FOR /F "tokens=5" %%a IN ('netstat -aon ^| find ":3307" ^| find "LISTENING"') DO taskkill /PID %%a /F /T >NUL 2>&1
+
+:: Clean up PID files just in case
+if exist "%PID_DIR%\caddy.pid" del "%PID_DIR%\caddy.pid"
+if exist "%PID_DIR%\php.pid" del "%PID_DIR%\php.pid"
+if exist "%PID_DIR%\mariadb.pid" del "%PID_DIR%\mariadb.pid"
 
 echo [%APP_NAME%] All services stopped.
