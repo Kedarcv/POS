@@ -35,6 +35,7 @@ class Printer_config extends Secure_Controller
     public function save()
     {
         $printerConnection    = $this->request->getPost('printer_connection');
+        $printerDeviceName    = $this->request->getPost('printer_device_name');
         $printerBluetoothName = $this->request->getPost('printer_bluetooth_name');
         $printerUsbVendorId   = $this->request->getPost('printer_usb_vendor_id');
         $printerNetworkIp     = $this->request->getPost('printer_network_ip');
@@ -53,6 +54,7 @@ class Printer_config extends Secure_Controller
 
         $batch_save_data = [
             'printer_connection'        => $printerConnection,
+            'printer_device_name'       => $printerDeviceName,
             'printer_bluetooth_name'    => $printerBluetoothName,
             'printer_usb_vendor_id'     => $printerUsbVendorId,
             'printer_network_ip'        => $printerNetworkIp,
@@ -71,6 +73,7 @@ class Printer_config extends Secure_Controller
         $printerConfigJson = json_encode([
             'printer' => [
                 'connection'          => $printerConnection,
+                'device_name'         => $printerDeviceName,
                 'bluetooth_name'      => $printerBluetoothName,
                 'usb_vendor_id'       => $printerUsbVendorId,
                 'network_ip'          => $printerNetworkIp,
@@ -107,7 +110,8 @@ class Printer_config extends Secure_Controller
     private function _load_printer_config(): array
     {
         $defaults = [
-            'printer_connection'        => 'browser',
+            'printer_connection'        => 'usb',
+            'printer_device_name'       => '',
             'printer_bluetooth_name'    => '',
             'printer_usb_vendor_id'     => '',
             'printer_network_ip'        => '',

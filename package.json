@@ -30,9 +30,7 @@
         "gulp": "gulp",
         "electron:icon": "electron electron/make-icon.cjs",
         "electron:start": "electron .",
-        "electron:dist": "electron-builder --win --mac",
-        "electron:build-win": "electron-builder --win",
-        "electron:build-mac": "electron-builder --mac"
+        "electron:build-win": "electron-builder --win"
     },
     "build": {
         "appId": "com.beamlink.pos",
@@ -80,11 +78,6 @@
             "installerIcon": "installer/assets/icon.ico",
             "uninstallerIcon": "installer/assets/icon.ico",
             "deleteAppDataOnUninstall": false
-        },
-        "mac": {
-            "target": "dmg",
-            "icon": "installer/assets/icon.png",
-            "identity": null
         }
     },
     "dependencies": {

@@ -1,12 +1,12 @@
 #!/bin/bash
 # BeamLink POS - Binary Downloader
-# Downloads static PHP, MariaDB, and Caddy for the target platform
+# Downloads static PHP, MariaDB, and Caddy for Windows (the only installer target)
 
 set -e
 
 INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 BIN_DIR="$INSTALL_DIR/bin"
-PLATFORM="${1:-mac}"  # mac or windows
+PLATFORM="${1:-windows}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -43,73 +43,7 @@ extract_file() {
     esac
 }
 
-if [ "$PLATFORM" = "mac" ]; then
-    log "=== Downloading macOS arm64 binaries ==="
-
-    # PHP 8.2 static build
-    log "--- PHP 8.2 ---"
-    download_file \
-        "https://dl.static-php.dev/static-php-cli/common/php-8.2.28-cli-macos-aarch64.tar.gz" \
-        "$BIN_DIR/php-mac-arm64.tar.gz"
-    rm -rf "$BIN_DIR/php"
-    extract_file "$BIN_DIR/php-mac-arm64.tar.gz" "$BIN_DIR/php"
-    chmod +x "$BIN_DIR/php/php" 2>/dev/null || true
-    rm -f "$BIN_DIR/php-mac-arm64.tar.gz"
-
-    # Caddy
-    log "--- Caddy ---"
-    download_file \
-        "https://github.com/caddyserver/caddy/releases/download/v2.10.0/caddy_2.10.0_mac_arm64.tar.gz" \
-        "$BIN_DIR/caddy-mac-arm64.tar.gz"
-    rm -rf "$BIN_DIR/caddy"
-    extract_file "$BIN_DIR/caddy-mac-arm64.tar.gz" "$BIN_DIR/caddy"
-    chmod +x "$BIN_DIR/caddy/caddy" 2>/dev/null || true
-    rm -f "$BIN_DIR/caddy-mac-arm64.tar.gz"
-
-    # MySQL Community Server - copy from Homebrew (no official macOS arm64 tarball available)
-    log "--- MySQL ---"
-    if [ ! -f "$BIN_DIR/mariadb/bin/mysqld" ] || [ ! -s "$BIN_DIR/mariadb/bin/mysqld" ]; then
-        rm -rf "$BIN_DIR/mariadb"
-        BREW_MYSQL="$(brew --prefix mysql 2>/dev/null || echo "")"
-        if [ -z "$BREW_MYSQL" ] || [ ! -d "$BREW_MYSQL" ]; then
-            log "Installing MySQL via Homebrew..."
-            HOMEBREW_NO_AUTO_UPDATE=1 brew install mysql
-            BREW_MYSQL="$(brew --prefix mysql)"
-        fi
-        log "Copying MySQL from Homebrew: $BREW_MYSQL"
-        mkdir -p "$BIN_DIR/mariadb/bin"
-        mkdir -p "$BIN_DIR/mariadb/share"
-        mkdir -p "$BIN_DIR/mariadb/lib"
-        # Copy essential binaries
-        for bin in mysqld mysql mysqld_safe mysql_install_db mysqladmin; do
-            if [ -f "$BREW_MYSQL/bin/$bin" ]; then
-                cp "$BREW_MYSQL/bin/$bin" "$BIN_DIR/mariadb/bin/"
-                chmod +x "$BIN_DIR/mariadb/bin/$bin"
-            fi
-        done
-        # Copy share (needed for mysql_install_db initialization)
-        if [ -d "$BREW_MYSQL/share/mysql" ]; then
-            cp -R "$BREW_MYSQL/share/mysql" "$BIN_DIR/mariadb/share/"
-        fi
-        # Copy required libraries
-        if [ -d "$BREW_MYSQL/lib" ]; then
-            cp -R "$BREW_MYSQL/lib/"*.dylib "$BIN_DIR/mariadb/lib/" 2>/dev/null || true
-        fi
-        # Copy plugin directory (auth plugins etc.)
-        if [ -d "$BREW_MYSQL/lib/plugin" ]; then
-            cp -R "$BREW_MYSQL/lib/plugin" "$BIN_DIR/mariadb/lib/"
-        fi
-        log "MySQL binaries copied successfully."
-    else
-        log "Already exists: $BIN_DIR/mariadb/bin/mysqld"
-    fi
-
-    log "=== macOS arm64 binaries downloaded ==="
-    log "PHP:  $BIN_DIR/php-mac-arm64/php"
-    log "Caddy: $BIN_DIR/caddy-mac-arm64/caddy"
-    log "MySQL: $BIN_DIR/mysql-mac-arm64/"
-
-elif [ "$PLATFORM" = "windows" ]; then
+if [ "$PLATFORM" = "windows" ]; then
     log "=== Downloading Windows x64 binaries ==="
 
     # PHP 8.2 NTS (NTS = Non-Thread Safe, for CLI/FPM)
@@ -170,7 +104,7 @@ elif [ "$PLATFORM" = "windows" ]; then
     log "MariaDB: $BIN_DIR/mariadb-win-x64/"
 
 else
-    error "Unknown platform: $PLATFORM (use mac or windows)"
+    error "Unknown platform: $PLATFORM (only windows is supported)"
     exit 1
 fi
 

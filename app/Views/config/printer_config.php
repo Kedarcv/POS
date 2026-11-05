@@ -4,6 +4,8 @@
  */
 ?>
 
+<?= view('partial/header') ?>
+
 <?= form_open('config/printer/save', ['id' => 'printer_config_form', 'class' => 'form-horizontal']) ?>
     <div id="config_wrapper">
         <fieldset id="config_info">
@@ -36,10 +38,10 @@
                             <?= form_dropdown(
                                 'printer_connection',
                                 [
-                                    'browser'   => 'Browser Print',
+                                    'usb'       => 'USB / Cable',
                                     'bluetooth' => 'Bluetooth',
-                                    'usb'       => 'USB',
-                                    'network'   => 'Network / TCP'
+                                    'network'   => 'Network / TCP',
+                                    'browser'   => 'Browser Print'
                                 ],
                                 $printer_config['printer_connection'],
                                 'id="printer_connection" class="form-control input-sm"'
@@ -89,6 +91,31 @@
                                 'placeholder' => 'e.g. 192.168.1.100',
                                 'value' => $printer_config['printer_network_ip']
                             ]) ?>
+                        </div>
+                    </div>
+
+                    <!-- Printer detection / pairing -->
+                    <div class="form-group form-group-sm">
+                        <label class="control-label col-xs-3" for="printer_device_name">Detected Receipt Printer</label>
+                        <div class="col-xs-5">
+                            <select name="printer_device_name" id="printer_device_name" class="form-control input-sm">
+                                <?php if (!empty($printer_config['printer_device_name'])) { ?>
+                                    <option value="<?= esc($printer_config['printer_device_name'], 'attr') ?>" selected>
+                                        <?= esc($printer_config['printer_device_name']) ?>
+                                    </option>
+                                <?php } ?>
+                            </select>
+                            <p class="help-block" style="margin-bottom: 4px;">
+                                Plug the printer in with its USB cable, or pair a Bluetooth printer first, then click Detect.
+                                The selected printer receives every receipt automatically — no print dialog.
+                            </p>
+                            <button type="button" class="btn btn-default btn-sm" id="detect_printers_button">
+                                <span class="glyphicon glyphicon-search"></span> Detect Printers
+                            </button>
+                            <button type="button" class="btn btn-default btn-sm" id="pair_bluetooth_button">
+                                <span class="glyphicon glyphicon-signal"></span> Pair Bluetooth Printer
+                            </button>
+                            <span id="printer_detect_status" class="text-muted" style="margin-left: 6px;"></span>
                         </div>
                     </div>
 
@@ -277,6 +304,81 @@
             $('.printer-connection-field[data-connection="' + connection + '"]').show();
         });
 
+        function setPrinterStatus(message, isError) {
+            $('#printer_detect_status')
+                .text(message)
+                .toggleClass('text-danger', !!isError)
+                .toggleClass('text-muted', !isError);
+        }
+
+        // Lists the printers the operating system already knows about —
+        // that covers USB/cable printers and Bluetooth printers paired
+        // through the OS Bluetooth settings.
+        function detectPrinters() {
+            if (!window.beamlinkPrint) {
+                setPrinterStatus('Printer detection is only available in the desktop app.', true);
+                return;
+            }
+
+            setPrinterStatus('Detecting…');
+            window.beamlinkPrint.listPrinters().then(function(printers) {
+                var $select = $('#printer_device_name');
+                var current = $select.val();
+
+                $select.empty();
+                if (!printers || printers.length === 0) {
+                    setPrinterStatus('No printers found. Check the cable / pairing and try again.', true);
+                    return;
+                }
+
+                printers.forEach(function(printer) {
+                    $select.append($('<option>', {
+                        value: printer.name
+                    }).text(printer.displayName || printer.name));
+                });
+
+                if (current) {
+                    $select.val(current);
+                } else {
+                    $select.val(printers[0].name);
+                    window.beamlinkPrint.setSelectedPrinter('receipt_printer', printers[0].name);
+                }
+
+                setPrinterStatus(printers.length + ' printer(s) detected.');
+            }).catch(function() {
+                setPrinterStatus('Could not list printers.', true);
+            });
+        }
+
+        $('#detect_printers_button').click(detectPrinters);
+
+        $('#printer_device_name').change(function() {
+            if (window.beamlinkPrint && $(this).val()) {
+                window.beamlinkPrint.setSelectedPrinter('receipt_printer', $(this).val());
+            }
+        });
+
+        $('#pair_bluetooth_button').click(function() {
+            if (!window.beamlinkPrint) {
+                setPrinterStatus('Bluetooth pairing is only available in the desktop app.', true);
+                return;
+            }
+            window.beamlinkPrint.openBluetoothSettings();
+            setPrinterStatus('Pair the printer in the Bluetooth settings, then click Detect Printers.');
+        });
+
+        // On load, make sure the saved printer is also the one the print
+        // bridge uses (settings.json lives on the desktop, the app config in
+        // the database — keep them in sync).
+        if (window.beamlinkPrint) {
+            var saved = $('#printer_device_name').val();
+            if (saved) {
+                window.beamlinkPrint.setSelectedPrinter('receipt_printer', saved);
+            } else {
+                detectPrinters();
+            }
+        }
+
         // Toggle terminal fields
         $('#terminal_enabled').change(function() {
             if ($(this).is(':checked')) {
@@ -304,3 +406,5 @@
         }));
     });
 </script>
+
+<?= view('partial/footer') ?>

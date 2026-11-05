@@ -231,9 +231,42 @@
             </div>
 
             <div class="form-group form-group-sm">
+                <?= form_label('Printer Connection', 'printer_connection', ['class' => 'control-label col-xs-2']) ?>
+                <div class="col-xs-3">
+                    <?= form_dropdown(
+                        'printer_connection',
+                        [
+                            'usb'       => 'USB / Cable',
+                            'bluetooth' => 'Bluetooth',
+                            'network'   => 'Network / TCP',
+                            'browser'   => 'Browser Print'
+                        ],
+                        $config['printer_connection'] ?? 'usb',
+                        'id="printer_connection" class="form-control input-sm"'
+                    ) ?>
+                </div>
+                <div class="col-xs-5">
+                    <button type="button" class="btn btn-default btn-sm" id="refresh_printers_button">
+                        <span class="glyphicon glyphicon-search"></span> Detect Printers
+                    </button>
+                    <button type="button" class="btn btn-default btn-sm" id="pair_bluetooth_button">
+                        <span class="glyphicon glyphicon-signal"></span> Pair Bluetooth Printer
+                    </button>
+                    <span id="printer_detect_status" class="text-muted" style="margin-left: 6px;"></span>
+                </div>
+            </div>
+
+            <div class="form-group form-group-sm">
                 <?= form_label(lang('Config.receipt_printer'), 'config_receipt_printer', ['class' => 'control-label col-xs-2']) ?>
                 <div class="col-xs-2">
                     <?= form_dropdown('receipt_printer', [], ' ', 'id="receipt_printer" class="form-control"') ?>
+                </div>
+                <div class="col-xs-6">
+                    <p class="help-block" style="margin: 0;">
+                        Plug a USB/cable printer in, or pair a Bluetooth printer, then click Detect Printers.
+                        Receipts print straight to the selected device.
+                        <a href="<?= base_url('config/printer') ?>">Advanced printer settings</a>
+                    </p>
                 </div>
             </div>
 
@@ -337,26 +370,61 @@
 <script type="text/javascript">
     // Validation and submit handling
     $(document).ready(function() {
+        function setPrinterStatus(message, isError) {
+            $('#printer_detect_status')
+                .text(message)
+                .toggleClass('text-danger', !!isError)
+                .toggleClass('text-muted', !isError);
+        }
+
         if (window.beamlinkPrint) {
             // The app's native Electron printer bridge — the real path in
             // the shipped app. Selections are persisted by the main process
             // (settings.json), not localStorage, so they're consistent
             // across every window (a "Print Last Receipt" tab included)
             // rather than per-renderer-origin.
-            window.beamlinkPrint.listPrinters().then(function(printers) {
-                var roles = ['receipt_printer', 'invoice_printer', 'takings_printer'];
-                roles.forEach(function(role) {
-                    var $select = $('#' + role);
-                    printers.forEach(function(printer) {
-                        $select.append($('<option>', { value: printer.name }).text(printer.displayName || printer.name));
+            var refreshPrinters = function(preserveSelection) {
+                window.beamlinkPrint.listPrinters().then(function(printers) {
+                    var roles = ['receipt_printer', 'invoice_printer', 'takings_printer'];
+
+                    roles.forEach(function(role) {
+                        var $select = $('#' + role);
+                        var current = preserveSelection ? $select.val() : null;
+
+                        $select.empty();
+                        printers.forEach(function(printer) {
+                            $select.append($('<option>', { value: printer.name }).text(printer.displayName || printer.name));
+                        });
+
+                        if (current) {
+                            $select.val(current);
+                        } else {
+                            window.beamlinkPrint.getSelectedPrinter(role).then(function(selected) {
+                                $select.val(selected);
+                            });
+                        }
+
+                        $select.off('change').on('change', function() {
+                            window.beamlinkPrint.setSelectedPrinter(role, $(this).val());
+                        });
                     });
-                    window.beamlinkPrint.getSelectedPrinter(role).then(function(selected) {
-                        $select.val(selected);
-                    });
-                    $select.on('change', function() {
-                        window.beamlinkPrint.setSelectedPrinter(role, $(this).val());
-                    });
+
+                    setPrinterStatus(printers.length + ' printer(s) detected.', printers.length === 0);
+                }).catch(function() {
+                    setPrinterStatus('Could not list printers.', true);
                 });
+            };
+
+            refreshPrinters(false);
+
+            $('#refresh_printers_button').click(function() {
+                setPrinterStatus('Detecting…');
+                refreshPrinters(true);
+            });
+
+            $('#pair_bluetooth_button').click(function() {
+                window.beamlinkPrint.openBluetoothSettings();
+                setPrinterStatus('Pair the printer in Bluetooth settings, then click Detect Printers.');
             });
         } else if (window.localStorage && window.jsPrintSetup) {
             var printers = (jsPrintSetup.getPrintersList() && jsPrintSetup.getPrintersList().split(',')) || [];

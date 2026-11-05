@@ -955,6 +955,7 @@ class Config extends Secure_Controller
             'print_silently'                => $this->request->getPost('print_silently') != null,
             'print_header'                  => $this->request->getPost('print_header') != null,
             'print_footer'                  => $this->request->getPost('print_footer') != null,
+            'printer_connection'            => $this->request->getPost('printer_connection'),
             'print_top_margin'              => $this->request->getPost('print_top_margin', FILTER_SANITIZE_NUMBER_INT),
             'print_left_margin'             => $this->request->getPost('print_left_margin', FILTER_SANITIZE_NUMBER_INT),
             'print_bottom_margin'           => $this->request->getPost('print_bottom_margin', FILTER_SANITIZE_NUMBER_INT),

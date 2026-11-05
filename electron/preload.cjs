@@ -11,4 +11,8 @@ contextBridge.exposeInMainWorld('beamlinkPrint', {
     listPrinters: () => ipcRenderer.invoke('list-printers'),
     getSelectedPrinter: (printerRole) => ipcRenderer.invoke('get-selected-printer', printerRole),
     setSelectedPrinter: (printerRole, deviceName) => ipcRenderer.invoke('set-selected-printer', printerRole, deviceName),
+    // Opens the OS Bluetooth pairing screen so a Bluetooth receipt printer
+    // can be paired; once paired it shows up in listPrinters() like any
+    // other system printer.
+    openBluetoothSettings: () => ipcRenderer.invoke('open-bluetooth-settings'),
 });

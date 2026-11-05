@@ -205,6 +205,25 @@ ipcMain.handle('set-selected-printer', (event, printerRole, deviceName) => {
     return true;
 });
 
+// Sends the user to the OS Bluetooth pairing screen. A Bluetooth receipt
+// printer is paired at the OS level (Windows Settings > Bluetooth & devices),
+// after which it appears in listPrinters() and can be selected like any
+// USB/cable printer.
+ipcMain.handle('open-bluetooth-settings', () => {
+    if (process.platform === 'win32') {
+        shell.openExternal('ms-settings:bluetooth');
+        return true;
+    }
+    if (process.platform === 'darwin') {
+        shell.openExternal('x-apple.systempreferences:com.apple.BluetoothSettings');
+        return true;
+    }
+
+    // Linux desktops vary too much to guess a settings URL; the user can
+    // pair from their desktop's Bluetooth panel and then click Detect.
+    return false;
+});
+
 // A till is expected to come back up on its own after a power cut or reboot,
 // so launch-at-login defaults to on. Users can turn it off from the menu.
 function applyAutoLaunch(enabled) {

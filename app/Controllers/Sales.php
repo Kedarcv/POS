@@ -940,6 +940,12 @@ class Sales extends Secure_Controller
                 }
                 $data['receipt_template_view'] = $receipt_template;
 
+                // A completed counter sale always goes straight to the
+                // receipt printer — the cashier has just taken payment, so
+                // making them tick "Print after Sale" and click Print again
+                // is an extra chance to hand the customer no receipt.
+                $data['print_after_sale'] = true;
+
                 $this->sale_lib->clear_all();
                 return view('sales/receipt', $data);
             }
@@ -1366,7 +1372,7 @@ class Sales extends Secure_Controller
      * customer asking for another copy, shouldn't require digging through
      * Sales > Manage to find the sale again).
      */
-    public function getReprintLast(): ResponseInterface
+    public function getReprintLast(): ResponseInterface|string
     {
         $employeeId = $this->employee->get_logged_in_employee_info()->person_id;
 
@@ -1381,7 +1387,15 @@ class Sales extends Secure_Controller
             return redirect()->to('/sales')->with('error', 'No recent sale to reprint.');
         }
 
-        return redirect()->to('/sales/receipt/' . $row['sale_id']);
+        // Render the receipt and print it straight away rather than
+        // redirecting to the normal receipt page (which only shows a Print
+        // button, so in the desktop app the cashier would then have to
+        // click it — or worse, end up in the browser's Save-as-PDF dialog).
+        $data = $this->_load_sale_data($row['sale_id']);
+        $this->sale_lib->clear_all();
+        $data['print_after_sale'] = true;
+
+        return view('sales/receipt', $data);
     }
 
     /**

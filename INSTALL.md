@@ -48,11 +48,9 @@ FORCE_HTTPS = true
 
 ## Desktop install (recommended)
 
-The easiest way to run BeamLink POS on your own Mac or Windows machine is the native desktop app. It bundles its own PHP runtime and its own portable MariaDB database — there is nothing to install or configure separately, and **no Docker is required**.
+The easiest way to run BeamLink POS on your own Windows machine is the native desktop app. It bundles its own PHP runtime and its own portable MariaDB database — there is nothing to install or configure separately, and **no Docker is required**.
 
-1. Download the latest installer for your platform from the [GitHub Releases page](https://github.com/opensourcepos/opensourcepos/releases) (or from the build artifacts, if you build it yourself — see `installer/README.md`):
-   - macOS: `BeamLink POS-<version>.dmg`
-   - Windows: `BeamLink POS Setup <version>.exe`
+1. Download the latest Windows installer from the [GitHub Releases page](https://github.com/opensourcepos/opensourcepos/releases) (or from the build artifacts, if you build it yourself — see `installer/README.md`): `BeamLink POS Setup <version>.exe`
 2. Install and launch "BeamLink POS" like any other desktop app.
 3. On first launch, the app initializes its bundled MariaDB database, creates the `ospos` schema, and runs migrations automatically.
 4. The setup wizard opens in your default browser so you can set the admin password and company details.

@@ -437,6 +437,12 @@ helper('url');
                                     ]) ?>
                                 </td>
                             </tr>
+                            <?php if ($amount_change > 0) { ?>
+                                <tr>
+                                    <td><span><?= lang(ucfirst($controller_name) . '.change_due') ?></span></td>
+                                    <td><span class="label label-success" style="font-size: 100%;"><?= to_currency($amount_change) ?></span></td>
+                                </tr>
+                            <?php } ?>
                             <tr class="reference-code-input reference-code-input-hidden">
                                 <td style="padding-top: 8px;"><span id='reference_code_label'><?= lang('Sales.reference_code') ?></span></td>
                                 <td style="padding-top: 8px;">
@@ -470,8 +476,8 @@ helper('url');
 
                         if (!$due_payment || ($due_payment && isset($customer))) {    // TODO: $due_payment is not needed because the first clause insures that it will always be true if it gets to this point.  Can be shortened to if (!$due_payment || isset($customer))
                     ?>
-                            <div class="btn btn-sm btn-success pull-right" id="finish_sale_button" tabindex="<?= ++$tabindex ?>">
-                                <span class="glyphicon glyphicon-ok">&nbsp;</span><?= lang(ucfirst($controller_name) . '.complete_sale') ?>
+                            <div class="btn btn-sm btn-success pull-right" id="finish_sale_button" tabindex="<?= ++$tabindex ?>" title="Complete the sale and print the receipt">
+                                <span class="glyphicon glyphicon-ok">&nbsp;</span><?= lang(ucfirst($controller_name) . '.complete_sale') ?> &amp; <?= lang('Common.print') ?>
                             </div>
                     <?php
                         }
@@ -481,6 +487,18 @@ helper('url');
                     <?= form_open("$controller_name/addPayment", ['id' => 'add_payment_form', 'class' => 'form-horizontal']) ?>
                         <input type="hidden" name="complete_after_payment" value="0">
                         <table class="sales_table_100">
+                            <tr>
+                                <td colspan="2">
+                                    <div class="btn-group btn-group-justified" role="group" id="quick_payment_buttons">
+                                        <button type="button" class="btn btn-default btn-sm quick-payment-btn" data-payment-type="<?= esc(lang(ucfirst($controller_name) . '.cash'), 'attr') ?>">
+                                            <span class="glyphicon glyphicon-usd"></span> <?= lang(ucfirst($controller_name) . '.cash') ?>
+                                        </button>
+                                        <button type="button" class="btn btn-default btn-sm quick-payment-btn" data-payment-type="<?= esc(lang('Sales.ecocash'), 'attr') ?>">
+                                            <span class="glyphicon glyphicon-phone"></span> <?= lang('Sales.ecocash') ?>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                             <tr>
                                 <td><?= lang(ucfirst($controller_name) . '.payment') ?></td>
                                 <td>
@@ -493,6 +511,10 @@ helper('url');
                                     <?= form_input(['name' => 'amount_tendered', 'id' => 'amount_tendered', 'class' => 'form-control input-sm non-giftcard-input', 'value' => to_currency_no_money($amount_due), 'size' => '5', 'tabindex' => ++$tabindex, 'onClick' => 'this.select();']) ?>
                                     <?= form_input(['name' => 'amount_tendered', 'id' => 'amount_tendered', 'class' => 'form-control input-sm giftcard-input', 'disabled' => true, 'value' => to_currency_no_money($amount_due), 'size' => '5', 'tabindex' => ++$tabindex]) ?>
                                 </td>
+                            </tr>
+                            <tr id="change_row" style="display: none;">
+                                <td><span><?= lang(ucfirst($controller_name) . '.change_due') ?></span></td>
+                                <td><span id="change_due_amount" class="label label-success" style="font-size: 100%;">0</span></td>
                             </tr>
                             <tr class="reference-code-input reference-code-input-hidden">
                                 <td style="padding-top: 8px;"><span id='reference_code_label'><?= lang('Sales.reference_code') ?></span></td>
@@ -633,6 +655,11 @@ helper('url');
     const keyboardShortcuts = <?= json_encode($keyboardShortcuts ?? []) ?>;
     const paymentsCoverTotal = <?= json_encode((bool) $payments_cover_total) ?>;
     const referenceCodePaymentTypes = <?= json_encode($reference_code_payment_types) ?>;
+    const amountDue = <?= json_encode((float) $amount_due) ?>;
+    const cashAmountDue = <?= json_encode((float) $cash_amount_due) ?>;
+    const cashMode = <?= json_encode((bool) $cash_mode) ?>;
+    const totalsDecimals = <?= json_encode(totals_decimals()) ?>;
+    const cashLabel = <?= json_encode(lang(ucfirst($controller_name) . '.cash')) ?>;
     const shortcutCodes = {
         items: keyboardShortcuts?.items?.code ?? null,
         customers: keyboardShortcuts?.customers?.code ?? null,
@@ -861,6 +888,21 @@ helper('url');
 
         $('#payment_types').change(check_payment_type).ready(check_payment_type);
 
+        // Clear one-tap payment method buttons: Cash / EcoCash.
+        $('#quick_payment_buttons').on('click', '.quick-payment-btn', function() {
+            var $select = $('#payment_types');
+            $select.val($(this).data('payment-type'));
+            if ($select.data('selectpicker')) {
+                $select.selectpicker('refresh');
+            }
+            $select.trigger('change');
+            $('#amount_tendered:enabled').focus().select();
+        });
+
+        // Live change calculation while the cashier types the cash received.
+        $('#amount_tendered').on('input keyup change', update_change_due);
+        update_change_due();
+
         $('#cart_contents input').keypress(function(event) {
             if (event.which == 13) {
                 $(this).parents('tr').prevAll('form:first').submit();
@@ -916,6 +958,46 @@ helper('url');
         });
     });
 
+    // Shows the change the customer is owed as soon as the cash received is
+    // entered, instead of only on the printed receipt.
+    function update_change_due() {
+        var $row = $('#change_row');
+        if (!$row.length) {
+            return;
+        }
+
+        var paymentType = $('#payment_types').val();
+        var isCash = paymentType == cashLabel;
+
+        if (!isCash) {
+            $row.hide();
+            return;
+        }
+
+        var $input = $('#amount_tendered:enabled');
+        if (!$input.length || $input.prop('disabled')) {
+            $row.hide();
+            return;
+        }
+
+        var due = (cashMode ? cashAmountDue : amountDue);
+        var received = parseFloat($input.val());
+        if (isNaN(received) || received <= 0) {
+            $row.hide();
+            return;
+        }
+
+        var difference = received - due;
+        var $badge = $('#change_due_amount');
+
+        $row.show();
+        if (difference >= 0) {
+            $badge.removeClass('label-warning').addClass('label-success').text(difference.toFixed(totalsDecimals));
+        } else {
+            $badge.removeClass('label-success').addClass('label-warning').text('<?= esc(lang('Sales.amount_due'), 'js') ?>: ' + Math.abs(difference).toFixed(totalsDecimals));
+        }
+    }
+
     function check_payment_type() {
         const cash_mode = <?= json_encode($cash_mode) ?>;
         const paymentType = $("#payment_types").val();
@@ -956,6 +1038,8 @@ helper('url');
                 $(".reference-code-input input").attr('disabled', true);
             }
         }
+
+        update_change_due();
     }
 
     // Add Keyboard Shortcuts/Hotkeys to Sale Register
