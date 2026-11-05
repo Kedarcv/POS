@@ -17,7 +17,7 @@ import zip from 'gulp-zip'
 import run from 'gulp-run'
 
 import { Stream } from 'readable-stream'
-const {finished, pipeline} = Stream.promises
+const {pipeline} = Stream.promises
 
 
 var prod0js;
@@ -38,10 +38,32 @@ gulp.task('compress', function() {
 });
 
 
-gulp.task('update-licenses', function() {
-    run('composer licenses --format=json --no-dev > public/license/composer.LICENSES').exec();
-    run('npx license-report --only=prod --output=json --fields=name --fields=author --fields=homepage --fields=installedVersion --fields=licenseType > public/license/npm-prod.LICENSES').exec();
-    run('npx license-report --only=dev --output=json --fields=name --fields=author --fields=homepage --fields=installedVersion --fields=licenseType > public/license/npm-dev.LICENSES').exec();
+gulp.task('update-licenses', async function() {
+    const commands = [
+        'composer licenses --format=json --no-dev > public/license/composer.LICENSES',
+        'npx license-report --only=prod --output=json --fields=name --fields=author --fields=homepage --fields=installedVersion --fields=licenseType > public/license/npm-prod.LICENSES',
+        'npx license-report --only=dev --output=json --fields=name --fields=author --fields=homepage --fields=installedVersion --fields=licenseType > public/license/npm-dev.LICENSES'
+    ];
+
+    // These were previously fired without being awaited, so a failure (e.g.
+    // composer licenses failing on Windows runners) threw an unhandled
+    // stream 'error' well after this task reported itself finished, crashing
+    // the whole build. License reports are informational, not build
+    // critical, so a failed command is logged and skipped instead.
+    await Promise.all(commands.map((command) => new Promise((resolve) => {
+        const stream = run(command);
+        // Calling the exec() callback with an error also makes the
+        // underlying Transform stream emit 'error' (that's how Node
+        // signals a failed _transform); without a listener that would
+        // crash the whole build, so silence it here now that the
+        // callback below already reports and handles the failure.
+        stream.on('error', () => {});
+        stream.exec(undefined, (err) => {
+            if (err) console.warn(`[update-licenses] skipped "${command}": ${err.message}`);
+            resolve();
+        });
+    })));
+
     return pipeline(gulp.src('LICENSE'),gulp.dest('public/license'));
 });
 

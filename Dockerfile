@@ -1,3 +1,7 @@
+# Optional, self-hosted/server deployment path. For a single desktop/POS
+# terminal, use the standalone desktop installer instead (see
+# INSTALL.md#desktop-install-recommended) — it bundles its own MariaDB and
+# needs no Docker.
 FROM php:8.2-apache AS ospos
 LABEL maintainer="jekkos"
 

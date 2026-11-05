@@ -46,7 +46,21 @@ If your installation is behind a proxy with SSL offloading, set:
 FORCE_HTTPS = true
 ```
 
-## Local install
+## Desktop install (recommended)
+
+The easiest way to run BeamLink POS on your own Mac or Windows machine is the native desktop app. It bundles its own PHP runtime and its own portable MariaDB database — there is nothing to install or configure separately, and **no Docker is required**.
+
+1. Download the latest installer for your platform from the [GitHub Releases page](https://github.com/opensourcepos/opensourcepos/releases) (or from the build artifacts, if you build it yourself — see `installer/README.md`):
+   - macOS: `BeamLink POS-<version>.dmg`
+   - Windows: `BeamLink POS Setup <version>.exe`
+2. Install and launch "BeamLink POS" like any other desktop app.
+3. On first launch, the app initializes its bundled MariaDB database, creates the `ospos` schema, and runs migrations automatically.
+4. The setup wizard opens in your default browser so you can set the admin password and company details.
+5. Done — the app manages starting and stopping its own database and web server every time you open/close it.
+
+This is the right choice for a single POS terminal or a small shop running on one machine. For a multi-terminal setup where several machines need to share one database, or for a headless Linux server, use the manual or Docker install methods below instead.
+
+## Local install (manual)
 
 First of all, if you're seeing the message `system folder missing` after launching your browser, that most likely means you have cloned the repository and have not built the project. To build the project from a source commit point instead of from an official release check out [Building OSPOS](BUILD.md). Otherwise, continue with the following steps.
 
@@ -64,7 +78,9 @@ First of all, if you're seeing the message `system folder missing` after launchi
 10. Enjoy!
 11. Oops, an issue? Please make sure you read the FAQ, wiki page, and you checked open and closed issues on GitHub. PHP `display_errors` is disabled by default. Create an` app/Config/.env` file from the `.env.example` to enable it in a development environment.
 
-## Local install using Docker
+## Docker install (optional — self-hosted/server)
+
+> **Note:** Docker is no longer the recommended way to run BeamLink POS on a single desktop machine — use the [Desktop install](#desktop-install-recommended) above instead, which bundles its own database and needs no containers at all. Docker remains a supported option for self-hosting on a Linux server or sharing one install across multiple terminals.
 
 OSPOS can be deployed using Docker on Linux, Mac, and Windows. Locally or on a host (server).
 This setup dramatically reduces the number of possible issues as all setup is now done in a Dockerfile.
@@ -78,7 +94,7 @@ Start the containers using the following command
     docker-compose up
 ```
 
-## Nginx install using Docker
+### Nginx install using Docker
 
 Since OSPOS version `3.3.0` the Docker installation offers a reverse proxy based on Nginx with a Let's Encrypt TLS certificate termination (aka HTTPS connection).
 Let's Encrypt is a free certificate issuer, requiring a special installation that this Docker installation would take care of for you.

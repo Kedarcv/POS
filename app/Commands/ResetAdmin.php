@@ -19,8 +19,8 @@ class ResetAdmin extends BaseCommand
     public function run(array $params): void
     {
         $email = trim((string) ($params[0] ?? CLI::prompt('Administrator email')));
-        $password = CLI::prompt('New password');
-        $confirmation = CLI::prompt('Confirm new password');
+        $password = $this->promptPassword('New password');
+        $confirmation = $this->promptPassword('Confirm new password');
 
         if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new RuntimeException('A valid email address is required.');
@@ -48,5 +48,29 @@ class ResetAdmin extends BaseCommand
         }
 
         CLI::write('Administrator account updated successfully.', 'green');
+    }
+
+    private function promptPassword(string $label): string
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            $command = sprintf(
+                '$value = Read-Host -Prompt %s -AsSecureString; ' .
+                '$ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($value); ' .
+                'try { [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) } ' .
+                'finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }',
+                escapeshellarg($label),
+            );
+            $password = shell_exec('powershell.exe -NoProfile -Command ' . $command);
+
+            return trim((string) $password);
+        }
+
+        CLI::write($label . ': ', 'yellow');
+        shell_exec('stty -echo');
+        $password = fgets(STDIN);
+        shell_exec('stty echo');
+        CLI::newLine();
+
+        return trim((string) $password);
     }
 }

@@ -62,6 +62,8 @@ The log in credentials are the same as the regular live demo.
 
 ## 💾 Installation
 
+The quickest way to get running on your own Mac or Windows machine is the native desktop app (see [Desktop install](INSTALL.md#desktop-install-recommended) in INSTALL.md) — it bundles its own database and runs standalone, with **no Docker required**.
+
 Please **refrain from creating issues** about installation problems before having read the FAQ and going through existing GitHub issues. We have a build pipeline that checks the sanity of our latest repository commit, and in case the application itself is broken then our build will be as well.
 
 This application can be set up in _many_ different ways and we only support the ones described in [the INSTALL.md file](INSTALL.md).
