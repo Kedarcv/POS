@@ -1,4 +1,8 @@
 
+# Optional, self-hosted/server deployment path (Nginx + Let's Encrypt
+# reverse proxy). For a single desktop/POS terminal, use the standalone
+# desktop installer instead — see INSTALL.md#desktop-install-recommended.
+
 include:
   - docker-compose.phpmyadmin.yml
 

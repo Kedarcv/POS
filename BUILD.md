@@ -43,8 +43,10 @@ I've added the following Powershell scripts to make my life a bit easier, which 
 
 * `build.ps1` - Which runs the build but also restores the .env from a backup I make of it in a specifically placed folder. I place a copy of the configured .env file in a folder that has the following path from the working folder: `../env/<working-folder-name>/.env`
 
-### Containerized setup
-Development using docker has the advantage that all the application's dependencies are contained within the docker environment. During development we want to have a live version of the code in the container when we edit it. This is accomplished by mounting the application folder within the /app of the docker container. 
+### Containerized setup (optional)
+Development using docker has the advantage that all the application's dependencies are contained within the docker environment. During development we want to have a live version of the code in the container when we edit it. This is accomplished by mounting the application folder within the /app of the docker container.
+
+This is one option for local development; it is not required. To run the standalone desktop app (which bundles its own PHP and MariaDB, no Docker involved) in development mode instead, use `npm run electron:start`.
 
 The file permissions for the repository in the container should be the same as on the host. That's why we have to startthe PHP process in docker with the host current uid. 
 

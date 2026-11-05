@@ -1,4 +1,6 @@
 
+# Optional Docker dev tooling (phpMyAdmin). See docker-compose.dev.yml.
+
 include:
     - docker-compose.dev.yml
 

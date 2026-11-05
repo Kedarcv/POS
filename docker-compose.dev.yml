@@ -1,3 +1,6 @@
+# Optional containerized dev environment. For standalone desktop
+# installs, see INSTALL.md#desktop-install-recommended — no Docker needed.
+
 volumes:
     uploads:
         driver: local
