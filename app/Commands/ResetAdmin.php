@@ -19,8 +19,8 @@ class ResetAdmin extends BaseCommand
     public function run(array $params): void
     {
         $email = trim((string) ($params[0] ?? CLI::prompt('Administrator email')));
-        $password = CLI::promptHidden('New password');
-        $confirmation = CLI::promptHidden('Confirm new password');
+        $password = CLI::prompt('New password');
+        $confirmation = CLI::prompt('Confirm new password');
 
         if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new RuntimeException('A valid email address is required.');
