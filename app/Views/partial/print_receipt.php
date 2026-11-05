@@ -17,10 +17,11 @@
         // for a browser tab with neither (e.g. this page opened outside the
         // app shell).
         if (window.beamlinkPrint) {
-            window.beamlinkPrint.printSilently('<?= esc($selected_printer, 'js') ?>').then(function(result) {
+            return window.beamlinkPrint.printSilently('<?= esc($selected_printer, 'js') ?>').then(function(result) {
                 if (!result.success && result.error) {
                     console.error('Print failed:', result.error);
                 }
+                return result;
             });
         } else if (window.jsPrintSetup) {
             // Set top margins in millimeters
@@ -63,8 +64,11 @@
                     jsPrintSetup.print();
                 }
             }
+
+            return Promise.resolve({success: true});
         } else {
             window.print();
+            return Promise.resolve({success: true});
         }
     }
 

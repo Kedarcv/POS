@@ -956,6 +956,10 @@ class Sales extends Secure_Controller
                 // making them tick "Print after Sale" and click Print again
                 // is an extra chance to hand the customer no receipt.
                 $data['print_after_sale'] = true;
+                // Tells the receipt view to show the post-sale printing
+                // status screen ("Printing receipt…" → "Sale complete" →
+                // "Start Another Sale") instead of the plain receipt page.
+                $data['is_new_sale'] = true;
 
                 $this->sale_lib->clear_all();
                 return view('sales/receipt', $data);

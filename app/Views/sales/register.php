@@ -61,6 +61,264 @@ if (isset($success)) {
 helper('url');
 ?>
 
+<style>
+    /* Register layout: the item list stays fluid, the payment panel keeps a
+       comfortable fixed width so the payment fields are never squashed. */
+    #register_layout {
+        display: flex;
+        align-items: flex-start;
+        gap: 18px;
+    }
+
+    #register_wrapper {
+        float: none;
+        width: auto;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    #overall_sale {
+        float: none;
+        width: 380px;
+        flex: 0 0 380px;
+        max-width: 380px;
+        margin-left: 0;
+        text-align: left;
+    }
+
+    @media (min-width: 1600px) {
+        #overall_sale {
+            width: 440px;
+            flex-basis: 440px;
+            max-width: 440px;
+        }
+    }
+
+    @media (max-width: 991px) {
+        #register_layout {
+            display: block;
+        }
+
+        #overall_sale {
+            width: 100%;
+            max-width: 100%;
+            margin-top: 12px;
+        }
+    }
+
+    #overall_sale .panel-body {
+        padding: 14px 15px;
+    }
+
+    #select_customer {
+        text-align: left;
+        margin-bottom: 4px;
+    }
+
+    #customer_label {
+        display: block;
+        margin: 0 0 8px !important;
+        font-weight: 600;
+        color: #56606a;
+        line-height: 1.3;
+    }
+
+    #select_customer .form-control {
+        margin-bottom: 8px;
+    }
+
+    #select_customer .btn {
+        margin-right: 6px;
+    }
+
+    #sale_totals,
+    #payment_totals {
+        border-top: 2px solid #dfe4e9;
+        margin-top: 4px;
+    }
+
+    #sale_totals th,
+    #payment_totals th {
+        padding: 6px 0;
+        font-weight: 600;
+        color: #56606a;
+    }
+
+    #sale_totals tr:first-child th,
+    #payment_totals tr:first-child th {
+        border-top: none;
+    }
+
+    #sale_total,
+    #sale_amount_due {
+        font-weight: 700;
+        color: #2c3e50;
+    }
+
+    #payment_details {
+        float: none;
+        clear: both;
+        width: 100%;
+        border-top: none;
+        margin-top: 12px;
+        padding: 0;
+        text-align: left;
+    }
+
+    .quick-pay-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .quick-pay-btn {
+        flex: 1 1 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        width: 100%;
+        margin: 0;
+        padding: 11px 8px;
+        border: none;
+        border-radius: 7px;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .quick-pay-btn .glyphicon {
+        font-size: 16px;
+    }
+
+    .quick-pay-cash {
+        background: #27ae60;
+    }
+
+    .quick-pay-cash:hover,
+    .quick-pay-cash:focus {
+        background: #1e8449;
+        color: #fff;
+    }
+
+    .quick-pay-ecocash {
+        background: #2980b9;
+    }
+
+    .quick-pay-ecocash:hover,
+    .quick-pay-ecocash:focus {
+        background: #206694;
+        color: #fff;
+    }
+
+    .payment-field {
+        margin-bottom: 12px;
+        text-align: left;
+    }
+
+    .payment-field-label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #7b8794;
+    }
+
+    #payment_details .form-control,
+    #payment_details .bootstrap-select,
+    #payment_details select {
+        width: 100% !important;
+    }
+
+    #amount_tendered {
+        height: 46px;
+        font-size: 20px;
+        font-weight: 600;
+        text-align: right;
+    }
+
+    .change-due-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 4px 0 14px;
+        padding: 11px 14px;
+        border-radius: 7px;
+        font-size: 14px;
+    }
+
+    .change-due-label {
+        font-weight: 600;
+    }
+
+    .change-due-amount {
+        font-size: 19px;
+        font-weight: 700;
+    }
+
+    .change-due-positive {
+        background: #e8f8f0;
+        color: #1e8449;
+    }
+
+    .change-due-negative {
+        background: #fdecea;
+        color: #c0392b;
+    }
+
+    .payment-status-card {
+        padding: 12px 14px;
+        margin-bottom: 14px;
+        border: 1px solid #e1e6eb;
+        border-radius: 8px;
+        background: #f8fafb;
+        text-align: left;
+    }
+
+    .payment-status-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 14px;
+        padding: 3px 0;
+    }
+
+    .payment-status-line + .payment-status-line {
+        margin-top: 7px;
+        padding-top: 9px;
+        border-top: 1px dashed #dfe4e9;
+    }
+
+    .payment-status-label {
+        color: #7b8794;
+    }
+
+    .payment-status-value {
+        font-weight: 700;
+        color: #2c3e50;
+    }
+
+    .payment-action-btn {
+        margin-top: 4px;
+        padding: 12px 10px;
+        font-size: 16px;
+    }
+
+    #payment_details table.sales_table_100 {
+        margin-bottom: 0;
+    }
+
+    #buttons_sale .btn,
+    #add_payment_button {
+        min-width: 0;
+    }
+</style>
+
+<div id="register_layout">
+
 <div id="register_wrapper">
 
     <!-- Top register controls -->
@@ -413,53 +671,22 @@ helper('url');
 
             <div id="payment_details">
                 <?php if ($payments_cover_total) { // Show Complete sale button instead of Add Payment if there is no amount due left ?>
-                    <?= form_open("$controller_name/addPayment", ['id' => 'add_payment_form', 'class' => 'form-horizontal']) ?>
-                        <input type="hidden" name="complete_after_payment" value="0">
-                        <table class="sales_table_100">
-                            <tr>
-                                <td><?= lang(ucfirst($controller_name) . '.payment') ?></td>
-                                <td>
-                                    <?= form_dropdown('payment_type', $payment_options, $selected_payment_type, ['id' => 'payment_types', 'class' => 'selectpicker show-menu-arrow', 'data-style' => 'btn-default btn-sm', 'data-width' => '100%', 'disabled' => 'disabled']) ?>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><span id="amount_tendered_label"><?= lang(ucfirst($controller_name) . '.amount_tendered') ?></span></td>
-                                <td>
-                                    <?= form_input([
-                                        'name' => 'amount_tendered',
-                                        'id' => 'amount_tendered',
-                                        'class' => 'form-control input-sm disabled',
-                                        'disabled' => 'disabled',
-                                        'value' => '0',
-                                        'size' => '5',
-                                        'tabindex' => ++$tabindex,
-                                        'onClick' => 'this.select();'
-                                    ]) ?>
-                                </td>
-                            </tr>
-                            <?php if ($amount_change > 0) { ?>
-                                <tr>
-                                    <td><span><?= lang(ucfirst($controller_name) . '.change_due') ?></span></td>
-                                    <td><span class="label label-success" style="font-size: 100%;"><?= to_currency($amount_change) ?></span></td>
-                                </tr>
-                            <?php } ?>
-                            <tr class="reference-code-input reference-code-input-hidden">
-                                <td style="padding-top: 8px;"><span id='reference_code_label'><?= lang('Sales.reference_code') ?></span></td>
-                                <td style="padding-top: 8px;">
-                                    <?php echo form_input(array(
-                                        'name'	=> 'reference_code',
-                                        'id'	=> 'reference_code',
-                                        'class'	=> 'form-control input-sm non-giftcard-input',
-                                        'disabled' => true,
-                                        'value'	=> '',
-                                        'size' => 5,
-                                        'tabindex'	=> ++$tabindex,
-                                        'onClick'	=> 'this.select();'));
-                                    ?>
-                                </td>
-                            </tr>
-                        </table>
-                    <?= form_close() ?>
+                    <div class="payment-status-card">
+                        <div class="payment-status-line">
+                            <span class="payment-status-label"><?= lang(ucfirst($controller_name) . '.payment') ?></span>
+                            <span class="payment-status-value"><?= esc($selected_payment_type ?? '') ?></span>
+                        </div>
+                        <div class="payment-status-line">
+                            <span class="payment-status-label"><?= lang(ucfirst($controller_name) . '.payments_total') ?></span>
+                            <span class="payment-status-value"><?= to_currency($payments_total) ?></span>
+                        </div>
+                        <?php if ($amount_change > 0) { ?>
+                            <div class="payment-status-line change-due-box change-due-positive">
+                                <span class="payment-status-label change-due-label"><?= lang(ucfirst($controller_name) . '.change_due') ?></span>
+                                <span class="payment-status-value change-due-amount"><?= to_currency($amount_change) ?></span>
+                            </div>
+                        <?php } ?>
+                    </div>
 
                     <?php
                     // Only show this part if in sale or return mode
@@ -476,9 +703,9 @@ helper('url');
 
                         if (!$due_payment || ($due_payment && isset($customer))) {    // TODO: $due_payment is not needed because the first clause insures that it will always be true if it gets to this point.  Can be shortened to if (!$due_payment || isset($customer))
                     ?>
-                            <div class="btn btn-sm btn-success pull-right" id="finish_sale_button" tabindex="<?= ++$tabindex ?>" title="Complete the sale and print the receipt">
-                                <span class="glyphicon glyphicon-ok">&nbsp;</span><?= lang(ucfirst($controller_name) . '.complete_sale') ?> &amp; <?= lang('Common.print') ?>
-                            </div>
+                            <button type="button" class="btn btn-success btn-block payment-action-btn" id="finish_sale_button" tabindex="<?= ++$tabindex ?>" title="Complete the sale and print the receipt">
+                                <span class="glyphicon glyphicon-ok"></span> <?= lang(ucfirst($controller_name) . '.complete_sale') ?> & <?= lang('Common.print') ?>
+                            </button>
                     <?php
                         }
                     }
@@ -486,57 +713,51 @@ helper('url');
                 <?php } else { ?>
                     <?= form_open("$controller_name/addPayment", ['id' => 'add_payment_form', 'class' => 'form-horizontal']) ?>
                         <input type="hidden" name="complete_after_payment" value="0">
-                        <table class="sales_table_100">
-                            <tr>
-                                <td colspan="2">
-                                    <div class="btn-group btn-group-justified" role="group" id="quick_payment_buttons">
-                                        <button type="button" class="btn btn-success btn-sm quick-payment-btn" data-payment-type="<?= esc(lang(ucfirst($controller_name) . '.cash'), 'attr') ?>">
-                                            <span class="glyphicon glyphicon-usd"></span> <?= lang(ucfirst($controller_name) . '.cash') ?>
-                                        </button>
-                                        <button type="button" class="btn btn-info btn-sm quick-payment-btn" data-payment-type="<?= esc(lang('Sales.ecocash'), 'attr') ?>" data-quick-action="ecocash">
-                                            <span class="glyphicon glyphicon-phone"></span> <?= lang('Sales.ecocash') ?>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><?= lang(ucfirst($controller_name) . '.payment') ?></td>
-                                <td>
-                                    <?= form_dropdown('payment_type', $payment_options,  $selected_payment_type, ['id' => 'payment_types', 'class' => 'selectpicker show-menu-arrow', 'data-style' => 'btn-default btn-sm', 'data-width' => '100%']) ?>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><span id="amount_tendered_label"><?= lang(ucfirst($controller_name) . '.amount_tendered') ?></span></td>
-                                <td>
-                                    <?= form_input(['name' => 'amount_tendered', 'id' => 'amount_tendered', 'class' => 'form-control input-sm non-giftcard-input', 'value' => to_currency_no_money($amount_due), 'size' => '5', 'tabindex' => ++$tabindex, 'onClick' => 'this.select();']) ?>
-                                    <?= form_input(['name' => 'amount_tendered', 'id' => 'amount_tendered', 'class' => 'form-control input-sm giftcard-input', 'disabled' => true, 'value' => to_currency_no_money($amount_due), 'size' => '5', 'tabindex' => ++$tabindex]) ?>
-                                </td>
-                            </tr>
-                            <tr id="change_row" style="display: none;">
-                                <td><span><?= lang(ucfirst($controller_name) . '.change_due') ?></span></td>
-                                <td><span id="change_due_amount" class="label label-success" style="font-size: 100%;">0</span></td>
-                            </tr>
-                            <tr class="reference-code-input reference-code-input-hidden">
-                                <td style="padding-top: 8px;"><span id='reference_code_label'><?= lang('Sales.reference_code') ?></span></td>
-                                <td style="padding-top: 8px;">
-                                    <?php echo form_input(array(
-                                        'name'     => 'reference_code',
-                                        'id'       => 'reference_code',
-                                        'class'    => 'form-control input-sm non-giftcard-input',
-                                        'disabled' => true,
-                                        'value'    => '',
-                                        'size'     => 5,
-                                        'tabindex' => ++$tabindex,
-                                        'onClick'  => 'this.select();'));
-                                    ?>
-                                </td>
-                            </tr>
-                        </table>
+
+                        <div class="quick-pay-row" id="quick_payment_buttons" role="group">
+                            <button type="button" class="quick-pay-btn quick-pay-cash quick-payment-btn" data-payment-type="<?= esc(lang(ucfirst($controller_name) . '.cash'), 'attr') ?>">
+                                <span class="glyphicon glyphicon-usd"></span>
+                                <span><?= lang(ucfirst($controller_name) . '.cash') ?></span>
+                            </button>
+                            <button type="button" class="quick-pay-btn quick-pay-ecocash quick-payment-btn" data-payment-type="<?= esc(lang('Sales.ecocash'), 'attr') ?>" data-quick-action="ecocash">
+                                <span class="glyphicon glyphicon-phone"></span>
+                                <span><?= lang('Sales.ecocash') ?></span>
+                            </button>
+                        </div>
+
+                        <div class="payment-field">
+                            <label class="payment-field-label" for="payment_types"><?= lang(ucfirst($controller_name) . '.payment') ?></label>
+                            <?= form_dropdown('payment_type', $payment_options,  $selected_payment_type, ['id' => 'payment_types', 'class' => 'selectpicker show-menu-arrow', 'data-style' => 'btn-default', 'data-width' => '100%']) ?>
+                        </div>
+
+                        <div class="payment-field">
+                            <label class="payment-field-label" id="amount_tendered_label" for="amount_tendered"><?= lang(ucfirst($controller_name) . '.amount_tendered') ?></label>
+                            <?= form_input(['name' => 'amount_tendered', 'id' => 'amount_tendered', 'class' => 'form-control non-giftcard-input', 'value' => to_currency_no_money($amount_due), 'autocomplete' => 'off', 'tabindex' => ++$tabindex, 'onClick' => 'this.select();']) ?>
+                            <?= form_input(['name' => 'amount_tendered', 'id' => 'amount_tendered', 'class' => 'form-control giftcard-input', 'disabled' => true, 'value' => to_currency_no_money($amount_due), 'tabindex' => ++$tabindex]) ?>
+                        </div>
+
+                        <div id="change_row" class="change-due-box change-due-positive" style="display: none;">
+                            <span id="change_due_label" class="change-due-label"><?= lang(ucfirst($controller_name) . '.change_due') ?></span>
+                            <span id="change_due_amount" class="change-due-amount">0.00</span>
+                        </div>
+
+                        <div class="payment-field reference-code-input reference-code-input-hidden">
+                            <label class="payment-field-label" id="reference_code_label" for="reference_code"><?= lang('Sales.reference_code') ?></label>
+                            <?php echo form_input(array(
+                                'name'     => 'reference_code',
+                                'id'       => 'reference_code',
+                                'class'    => 'form-control non-giftcard-input',
+                                'disabled' => true,
+                                'value'    => '',
+                                'tabindex' => ++$tabindex,
+                                'onClick'  => 'this.select();'));
+                            ?>
+                        </div>
                     <?= form_close() ?>
 
-                    <div class="btn btn-sm btn-success pull-right" id="add_payment_button" tabindex="<?= ++$tabindex ?>">
-                        <span class="glyphicon glyphicon-credit-card">&nbsp;</span><?= lang(ucfirst($controller_name) . '.add_payment') ?>
-                    </div>
+                    <button type="button" class="btn btn-success btn-block payment-action-btn" id="add_payment_button" tabindex="<?= ++$tabindex ?>">
+                        <span class="glyphicon glyphicon-credit-card"></span> <?= lang(ucfirst($controller_name) . '.add_payment') ?>
+                    </button>
                 <?php } ?>
 
                 <?php if (count($payments) > 0) { // Only show this part if there is at least one payment entered. ?>
@@ -651,6 +872,8 @@ helper('url');
     </div>
 </div>
 
+</div>
+
 <script type="text/javascript">
     const keyboardShortcuts = <?= json_encode($keyboardShortcuts ?? []) ?>;
     const paymentsCoverTotal = <?= json_encode((bool) $payments_cover_total) ?>;
@@ -659,6 +882,7 @@ helper('url');
     const cashAmountDue = <?= json_encode((float) $cash_amount_due) ?>;
     const cashMode = <?= json_encode((bool) $cash_mode) ?>;
     const totalsDecimals = <?= json_encode(totals_decimals()) ?>;
+    const currencySymbol = <?= json_encode($config['currency_symbol']) ?>;
     const cashLabel = <?= json_encode(lang(ucfirst($controller_name) . '.cash')) ?>;
     const shortcutCodes = {
         items: keyboardShortcuts?.items?.code ?? null,
@@ -883,12 +1107,7 @@ helper('url');
             } else {
                 // Cash (and the other direct methods) complete and print in
                 // one click when the amount received covers the balance.
-                var due = cashMode ? cashAmountDue : amountDue;
-                var received = parseFloat($('#amount_tendered:enabled').val()) || 0;
-                $('#add_payment_form')
-                    .find('input[name="complete_after_payment"]')
-                    .val(received >= due ? '1' : '0');
-                $('#add_payment_form').submit();
+                submitCashPayment();
             }
         });
 
@@ -923,7 +1142,8 @@ helper('url');
 
         $('#amount_tendered').keypress(function(event) {
             if (event.which == 13) {
-                $('#add_payment_form').submit();
+                event.preventDefault();
+                submitCashPayment();
             }
         });
 
@@ -970,6 +1190,19 @@ helper('url');
         });
     });
 
+    // Submits the payment form. When the cash received covers the balance
+    // the sale is completed (and the receipt printed) in the same step,
+    // otherwise the sale stays open for the remaining amount.
+    function submitCashPayment() {
+        var due = cashMode ? cashAmountDue : amountDue;
+        var received = parseFloat($('#amount_tendered:enabled').val()) || 0;
+
+        $('#add_payment_form')
+            .find('input[name="complete_after_payment"]')
+            .val(received >= due ? '1' : '0');
+        $('#add_payment_form').submit();
+    }
+
     // Shows the change the customer is owed as soon as the cash received is
     // entered, instead of only on the printed receipt.
     function update_change_due() {
@@ -1000,13 +1233,18 @@ helper('url');
         }
 
         var difference = received - due;
-        var $badge = $('#change_due_amount');
+        var $label = $('#change_due_label');
+        var $amount = $('#change_due_amount');
 
         $row.show();
         if (difference >= 0) {
-            $badge.removeClass('label-warning').addClass('label-success').text(difference.toFixed(totalsDecimals));
+            $row.removeClass('change-due-negative').addClass('change-due-positive');
+            $label.text("<?= esc(lang('Sales.change_due'), 'js') ?>");
+            $amount.text(currencySymbol + difference.toFixed(totalsDecimals));
         } else {
-            $badge.removeClass('label-success').addClass('label-warning').text('<?= esc(lang('Sales.amount_due'), 'js') ?>: ' + Math.abs(difference).toFixed(totalsDecimals));
+            $row.removeClass('change-due-positive').addClass('change-due-negative');
+            $label.text("<?= esc(lang('Sales.amount_due'), 'js') ?>");
+            $amount.text(currencySymbol + Math.abs(difference).toFixed(totalsDecimals));
         }
     }
 
