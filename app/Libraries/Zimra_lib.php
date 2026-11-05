@@ -35,6 +35,8 @@ use chillerlan\QRCode\QROptions;
  */
 class Zimra_lib
 {
+    private Zimra_node_bridge $nodeBridge;
+
     private const TEST_BASE_URL = 'https://fdmstest.zimra.co.zw';
     private const PROD_BASE_URL = 'https://fdms.zimra.co.zw';
 
@@ -45,6 +47,7 @@ class Zimra_lib
 
     public function __construct()
     {
+        $this->nodeBridge    = new Zimra_node_bridge();
         $this->settingsModel  = model(Zimra_settings::class);
         $this->taxMapModel    = model(Zimra_tax_map::class);
         $this->fiscalDayModel = model(Zimra_fiscal_day::class);
@@ -382,6 +385,10 @@ class Zimra_lib
      */
     public function fiscalizeSale(array $sale): array
     {
+        if ($this->shouldUseNodeBridge()) {
+            return $this->fiscalizeSaleWithNodeBridge($sale);
+        }
+
         if (!$this->isEnabled()) {
             return ['success' => false, 'skipped' => true, 'message' => 'Fiscalisation not enabled'];
         }
@@ -404,6 +411,65 @@ class Zimra_lib
         $result = $this->submitReceiptToFdms($settings, $day, $receiptCounter, $sale, $receiptId);
 
         return $result;
+    }
+
+    /**
+     * The npm SDK owns FDMS numbering, ECDSA signatures, hash chaining and
+     * crash reconciliation. PHP keeps the sale transaction and receipt view.
+     *
+     * @param array<string, mixed> $sale
+     * @return array<string, mixed>
+     */
+    protected function fiscalizeSaleWithNodeBridge(array $sale): array
+    {
+        $settings = $this->getSettings();
+        $receiptType = ($sale['receipt_type'] ?? 'FISCALINVOICE') === 'CREDITNOTE'
+            ? 'CreditNote'
+            : 'FiscalInvoice';
+
+        $receipt = [
+            'receiptType' => $receiptType,
+            'currency'    => (string) ($sale['currency'] ?? $settings->default_currency ?? 'USD'),
+            'invoiceNo'   => (string) ($sale['invoice_number'] ?? ('POS-' . $sale['sale_id'])),
+            'lines'       => array_map(static fn (array $line): array => [
+                'name'       => (string) $line['name'],
+                'price'      => (float) $line['unit_price'],
+                'quantity'   => (float) $line['quantity'],
+                'taxId'      => (int) $line['zimra_tax_id'],
+                'taxPercent' => $line['zimra_tax_percent'] === null ? null : (float) $line['zimra_tax_percent'],
+                'hsCode'     => $line['hs_code'] ?: null,
+            ], $sale['lines'] ?? []),
+            'payments'    => array_map(static fn (array $payment): array => [
+                'moneyType' => match (strtolower((string) $payment['type'])) {
+                    'card' => 'Card',
+                    'mobilewallet', 'mobile wallet', 'ecocash' => 'MobileWallet',
+                    'bank transfer', 'banktransfer' => 'BankTransfer',
+                    default => 'Cash',
+                },
+                'amount' => (float) $payment['amount'],
+            ], $sale['payments'] ?? []),
+        ];
+
+        $result = $this->nodeBridge->call([
+            'operation' => 'submit',
+            'profile'   => $this->nodeBridge->profilePath(),
+            'receipt'   => $receipt,
+        ]);
+
+        return [
+            'success'           => true,
+            'message'           => 'Receipt fiscalized',
+            'qr_url'            => $result['qrData'] ?? null,
+            'verification_code' => null,
+            'raw'               => $result,
+        ];
+    }
+
+    private function shouldUseNodeBridge(): bool
+    {
+        return getenv('ZIMRA_CLIENT') !== 'php'
+            && $this->nodeBridge->isAvailable()
+            && is_file($this->nodeBridge->profilePath() . DIRECTORY_SEPARATOR . 'device.json');
     }
 
     protected function submitReceiptToFdms(object $settings, object $day, int $receiptCounter, array $sale, int $receiptId): array

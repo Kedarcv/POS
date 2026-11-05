@@ -46,6 +46,13 @@
             "electron/main.cjs",
             "electron/preload.cjs",
             "electron/splash.html",
+            "scripts/**/*",
+            "node_modules/zimra-fdms/**/*",
+            "node_modules/@modelcontextprotocol/**/*",
+            "node_modules/@peculiar/**/*",
+            "node_modules/asn1js/**/*",
+            "node_modules/tslib/**/*",
+            "node_modules/zod/**/*",
             "package.json"
         ],
         "extraResources": [
@@ -115,7 +122,8 @@
         "jspdf-autotable": "^5.0.7",
         "tableexport.jquery.plugin": "^1.30.0",
         "tree-kill": "^1.2.2",
-        "wait-on": "^9.1.0"
+        "wait-on": "^9.1.0",
+        "zimra-fdms": "^0.4.1"
     },
     "devDependencies": {
         "electron": "^43.3.0",

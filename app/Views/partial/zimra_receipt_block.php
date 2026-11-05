@@ -10,9 +10,14 @@ if (!empty($zimra['success'])):
     ?>
     <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
     <div id="zimra_fiscal_block" style="text-align: center;">
-        <img src="<?= $zimra_lib->renderQrDataUri($zimra['qr_url']) ?>" alt="ZIMRA QR Code" style="width: 120px; height: 120px;"><br>
-        <span style="font-size: 85%;">Fiscal Verification Code</span><br>
-        <span style="font-weight: bold; font-size: 90%;"><?= esc($zimra['verification_code']) ?></span>
+        <?php if (!empty($zimra['qr_url'])): ?>
+            <img src="<?= $zimra_lib->renderQrDataUri($zimra['qr_url']) ?>" alt="ZIMRA QR Code" style="width: 120px; height: 120px;"><br>
+        <?php endif; ?>
+        <span style="font-size: 85%;">Fiscal receipt submitted to ZIMRA</span>
+        <?php if (!empty($zimra['verification_code'])): ?>
+            <br><span style="font-size: 85%;">Fiscal Verification Code</span><br>
+            <span style="font-weight: bold; font-size: 90%;"><?= esc($zimra['verification_code']) ?></span>
+        <?php endif; ?>
     </div>
 <?php elseif (isset($zimra) && empty($zimra['skipped'])): ?>
     <div style="text-align: center; font-size: 75%; color: #900;">

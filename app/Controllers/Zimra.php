@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Libraries\Zimra_lib;
+use App\Libraries\Zimra_node_bridge;
 use App\Models\Tax_category;
 use App\Models\Zimra_fiscal_day;
 use App\Models\Zimra_receipt;
@@ -20,6 +21,7 @@ class Zimra extends Secure_Controller
     private Zimra_fiscal_day $zimra_fiscal_day;
     private Zimra_receipt $zimra_receipt;
     private Tax_category $tax_category;
+    private Zimra_node_bridge $node_bridge;
 
     public function __construct()
     {
@@ -31,6 +33,7 @@ class Zimra extends Secure_Controller
         $this->zimra_fiscal_day = model(Zimra_fiscal_day::class);
         $this->zimra_receipt = model(Zimra_receipt::class);
         $this->tax_category = model(Tax_category::class);
+        $this->node_bridge = new Zimra_node_bridge();
     }
 
     public function getIndex(): string
@@ -100,7 +103,32 @@ class Zimra extends Secure_Controller
         ]);
 
         try {
-            $result = $this->zimra_lib->registerDevice($deviceId, $activationKey, $tin, $deviceSerialNo, $deviceModelName, $deviceModelVersion);
+            if ($this->node_bridge->isAvailable()) {
+                $nodeResult = $this->node_bridge->call([
+                    'operation'     => 'register',
+                    'profile'       => $this->node_bridge->profilePath(),
+                    'deviceId'      => $deviceId,
+                    'activationKey' => $activationKey,
+                    'serialNumber'  => $deviceSerialNo,
+                    'modelName'     => $deviceModelName,
+                    'modelVersion'  => $deviceModelVersion,
+                    'environment'   => $this->request->getPost('environment') === 'production' ? 'production' : 'test',
+                ]);
+                $this->zimra_settings->updateSettings([
+                    'device_id'        => $deviceId,
+                    'activation_key'   => $activationKey,
+                    'tin'              => $tin,
+                    'device_serial_no' => $deviceSerialNo,
+                    'device_model_name' => $deviceModelName,
+                    'device_model_version' => $deviceModelVersion,
+                    'certificate_path' => $nodeResult['certificateFile'],
+                    'private_key_path' => $nodeResult['privateKeyFile'],
+                    'registered_at'    => date('Y-m-d H:i:s'),
+                ]);
+                $result = ['success' => true, 'message' => 'Device registered successfully'];
+            } else {
+                $result = $this->zimra_lib->registerDevice($deviceId, $activationKey, $tin, $deviceSerialNo, $deviceModelName, $deviceModelVersion);
+            }
         } catch (\Throwable $e) {
             $result = ['success' => false, 'message' => $e->getMessage()];
         }
@@ -113,7 +141,12 @@ class Zimra extends Secure_Controller
     public function postOpenDay(): ResponseInterface
     {
         try {
-            $result = $this->zimra_lib->openDay();
+            $result = $this->node_bridge->isAvailable() && $this->hasNodeProfile()
+                ? ['success' => true, 'message' => 'Fiscal day opened', 'data' => $this->node_bridge->call([
+                    'operation' => 'open',
+                    'profile' => $this->node_bridge->profilePath(),
+                ])]
+                : $this->zimra_lib->openDay();
         } catch (\Throwable $e) {
             $result = ['success' => false, 'message' => $e->getMessage()];
         }
@@ -126,7 +159,12 @@ class Zimra extends Secure_Controller
     public function postCloseDay(): ResponseInterface
     {
         try {
-            $result = $this->zimra_lib->closeDay();
+            $result = $this->node_bridge->isAvailable() && $this->hasNodeProfile()
+                ? ['success' => true, 'message' => 'Fiscal day closed', 'data' => $this->node_bridge->call([
+                    'operation' => 'close',
+                    'profile' => $this->node_bridge->profilePath(),
+                ])]
+                : $this->zimra_lib->closeDay();
         } catch (\Throwable $e) {
             $result = ['success' => false, 'message' => $e->getMessage()];
         }
@@ -153,11 +191,21 @@ class Zimra extends Secure_Controller
     public function getFetchConfig(): ResponseInterface
     {
         try {
-            $result = $this->zimra_lib->getConfig();
+            $result = $this->node_bridge->isAvailable() && $this->hasNodeProfile()
+                ? $this->node_bridge->call([
+                    'operation' => 'config',
+                    'profile' => $this->node_bridge->profilePath(),
+                ])
+                : $this->zimra_lib->getConfig();
         } catch (\Throwable $e) {
             $result = ['ok' => false, 'message' => $e->getMessage()];
         }
 
         return $this->response->setJSON($result);
+    }
+
+    private function hasNodeProfile(): bool
+    {
+        return is_file($this->node_bridge->profilePath() . DIRECTORY_SEPARATOR . 'device.json');
     }
 }
