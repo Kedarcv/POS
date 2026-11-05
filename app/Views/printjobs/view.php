@@ -121,6 +121,82 @@ $is_terminal = in_array($job->status, ['collected', 'cancelled']);
             </div>
         </div>
 
+        <!-- Process & Ink Estimate -->
+        <?php if (! empty($process)): ?>
+        <div class="panel panel-info">
+            <div class="panel-heading"><strong><i class="bi bi-droplet-half"></i> <?= esc($process->name) ?> — ink &amp; price estimate</strong>
+                <?php if (! empty($job->ink_posted)): ?>
+                    <span class="label label-success pull-right">ink drawn from stock</span>
+                <?php else: ?>
+                    <span class="label label-default pull-right">posts when job → printing</span>
+                <?php endif; ?>
+            </div>
+            <div class="panel-body" style="padding:0;">
+                <table class="table table-condensed" style="margin-bottom:0;">
+                    <tr>
+                        <th style="width:25%;"><?= lang('Printjobs.area') ?></th>
+                        <td><?= $ink_estimate ? number_format($ink_estimate['area_m2'], 4) . ' m²' : '-' ?></td>
+                        <th style="width:20%;"><?= lang('Printjobs.coverage') ?></th>
+                        <td><?= $ink_estimate ? number_format($ink_estimate['coverage_pct'], 1) . '%' : '-' ?></td>
+                    </tr>
+                    <tr>
+                        <th><?= lang('Printjobs.est_ink') ?></th>
+                        <td><?= $ink_estimate ? number_format($ink_estimate['total_ml'], 1) . ' ml · ' . to_currency($ink_estimate['total_ink_cost']) : '-' ?></td>
+                        <th><?= lang('Printjobs.est_substrate_cost') ?></th>
+                        <td><?= $ink_estimate ? ($ink_estimate['substrate'] ? number_format($ink_estimate['substrate']['m2'], 3) . ' m² · ' . to_currency($ink_estimate['substrate_cost']) : '—') : '-' ?></td>
+                    </tr>
+                    <tr>
+                        <th><?= lang('Printjobs.est_overhead') ?></th>
+                        <td><?= $ink_estimate ? to_currency($ink_estimate['overhead_cost']) : '-' ?></td>
+                        <th><?= lang('Printjobs.est_spoilage') ?></th>
+                        <td><?= $ink_estimate ? to_currency($ink_estimate['spoilage_cost']) : '-' ?></td>
+                    </tr>
+                    <tr class="active">
+                        <th><?= lang('Printjobs.est_total_cost') ?></th>
+                        <td><strong><?= $ink_estimate ? to_currency($ink_estimate['total_cost']) : '-' ?></strong></td>
+                        <th><?= lang('Printjobs.est_margin') ?></th>
+                        <td>
+                            <?php if ($ink_estimate): ?>
+                                <strong style="color:<?= $ink_estimate['margin'] < 0 ? '#a94442' : 'inherit' ?>;">
+                                    <?= to_currency($ink_estimate['margin']) ?> (<?= number_format($ink_estimate['margin_pct'], 1) ?>%)
+                                </strong>
+                            <?php else: ?>-<?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?= lang('Printjobs.suggested_price') ?></th>
+                        <td><?= $ink_estimate ? to_currency($ink_estimate['suggested_price']) : '-' ?><?= $ink_estimate && $ink_estimate['floor_price'] > $ink_estimate['suggested_price'] ? ' <span class="text-danger" title="below cost-plus floor">▲ floor ' . to_currency($ink_estimate['floor_price']) . '</span>' : '' ?></td>
+                        <th>Charged</th>
+                        <td><strong><?= to_currency($job->total_cost) ?></strong></td>
+                    </tr>
+                </table>
+                <?php if ($ink_estimate && ! empty($ink_estimate['channels'])): ?>
+                <table class="table table-striped table-condensed" style="margin-bottom:0; font-size:12px;">
+                    <thead><tr><th>Channel</th><th class="text-right">ml</th><th class="text-right">Cost</th><th>Stock item</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($ink_estimate['channels'] as $c): ?>
+                        <tr>
+                            <td><?= esc($c['channel']) ?></td>
+                            <td class="text-right"><?= number_format($c['ml'], 2) ?></td>
+                            <td class="text-right"><?= to_currency($c['cost']) ?></td>
+                            <td>
+                                <?php if ($c['material_id'] === null): ?>
+                                    <span class="text-danger">no material set</span>
+                                <?php elseif ($c['item_id'] === null): ?>
+                                    <span class="text-warning"><?= esc($c['material_name']) ?> (not linked to POS stock)</span>
+                                <?php else: ?>
+                                    <?= esc($c['material_name']) ?>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Notes -->
         <?php if (! empty($job->notes)): ?>
         <div class="panel panel-default">
@@ -128,6 +204,54 @@ $is_terminal = in_array($job->status, ['collected', 'cancelled']);
             <div class="panel-body"><?= nl2br(esc($job->notes)) ?></div>
         </div>
         <?php endif; ?>
+
+        <!-- Attachments — artwork/reference files (a design forwarded from
+             WhatsApp, a customer's own PDF, ...) the team needs on hand to
+             actually run the job. Images/PDFs are served straight from
+             public/uploads for inline viewing; Download forces the file's
+             original name instead of the randomized on-disk one. -->
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Attachments</strong></div>
+            <div class="panel-body">
+                <?php if (empty($attachments)): ?>
+                    <p class="text-muted" style="margin-bottom:10px;">No files attached to this job yet.</p>
+                <?php else: ?>
+                    <div class="row" style="margin-bottom:10px;">
+                        <?php foreach ($attachments as $file): ?>
+                            <?php $isImage = in_array(strtolower($file->file_type), ['png', 'jpg', 'jpeg', 'gif', 'webp'], true); ?>
+                            <div class="col-xs-6 col-sm-4 col-md-3" style="margin-bottom:12px;">
+                                <div class="thumbnail" style="margin-bottom:4px;">
+                                    <?php if ($isImage): ?>
+                                        <a href="<?= base_url($file->file_path) ?>" target="_blank">
+                                            <img src="<?= base_url($file->file_path) ?>" alt="<?= esc($file->file_name) ?>" style="height:110px; width:100%; object-fit:cover;">
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="<?= base_url($file->file_path) ?>" target="_blank" class="text-center" style="display:block; height:110px; line-height:110px;">
+                                            <i class="glyphicon glyphicon-file" style="font-size:2.5em;"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                                <div style="font-size:0.85em; word-break:break-word;" title="<?= esc($file->file_name) ?>">
+                                    <?= esc(mb_strimwidth($file->file_name, 0, 28, '…')) ?>
+                                </div>
+                                <a href="<?= base_url('printjobs/download_file/' . $file->id) ?>" class="btn btn-xs btn-default" title="Download">
+                                    <i class="glyphicon glyphicon-download-alt"></i>
+                                </a>
+                                <button class="btn btn-xs btn-danger delete-attachment" data-id="<?= $file->id ?>" title="Remove">
+                                    <i class="glyphicon glyphicon-trash"></i>
+                                </button>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?= form_open_multipart('printjobs/upload_file/' . $job->id, ['class' => 'form-inline']) ?>
+                    <input type="file" name="attachment" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf" required>
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="glyphicon glyphicon-upload"></i> Attach File</button>
+                <?= form_close() ?>
+                <small class="text-muted">Images (PNG/JPG/GIF/WebP) or PDF, up to 10MB.</small>
+            </div>
+        </div>
 
         <!-- Material Usage -->
         <div class="panel panel-default">
@@ -140,6 +264,8 @@ $is_terminal = in_array($job->status, ['collected', 'cancelled']);
                             <th>Material</th>
                             <th>Quantity Used</th>
                             <th>Unit</th>
+                            <th class="text-right">Cost</th>
+                            <th>Source</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -148,6 +274,14 @@ $is_terminal = in_array($job->status, ['collected', 'cancelled']);
                             <td><?= esc($mu->material_name) ?></td>
                             <td><?= number_format($mu->quantity_used, 2) ?></td>
                             <td><?= esc($mu->material_unit) ?></td>
+                            <td class="text-right"><?= isset($mu->total_cost) && $mu->total_cost !== null ? to_currency((float) $mu->total_cost) : '-' ?></td>
+                            <td>
+                                <?php if (! empty($mu->material_item_id)): ?>
+                                    <span class="label label-info">Main stock</span>
+                                <?php else: ?>
+                                    <span class="label label-default">Print store</span>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -166,11 +300,18 @@ $is_terminal = in_array($job->status, ['collected', 'cancelled']);
                     <select name="material_id" class="form-control input-sm" required style="width:40%;">
                         <option value="">-- Select Material --</option>
                         <?php foreach ($materials as $m): ?>
-                            <option value="<?= $m->id ?>"><?= esc($m->name) ?> (<?= $m->current_stock ?> <?= $m->unit ?> in stock)</option>
+                            <option value="<?= $m->id ?>">
+                                <?= esc($m->name) ?>
+                                (<?= rtrim(rtrim(number_format((float) $m->available, 2), '0'), '.') ?> <?= esc($m->unit) ?><?= $m->item_id ? ' in main stock' : '' ?><?= (float) $m->unit_cost > 0 ? ' · ' . to_currency((float) $m->unit_cost) . '/' . esc($m->unit) : '' ?>)
+                            </option>
                         <?php endforeach; ?>
                     </select>
-                    <input type="number" name="quantity_used" class="form-control input-sm" placeholder="Qty" step="0.01" min="0.01" required style="width:20%;">
+                    <input type="number" name="quantity_used" class="form-control input-sm" placeholder="Qty" step="0.01" min="0.01" required style="width:18%;">
+                    <label class="checkbox-inline" style="margin-left:8px;" title="Log even if it takes stock below zero">
+                        <input type="checkbox" name="allow_negative" value="1"> allow negative
+                    </label>
                     <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> Add</button>
+                    <p class="help-block" style="margin-top:6px;">Materials linked to a stock item are drawn from the main location and booked as a Print&nbsp;Dept expense.</p>
                 <?= form_close() ?>
             </div>
         </div>
@@ -200,7 +341,7 @@ $is_terminal = in_array($job->status, ['collected', 'cancelled']);
                         <option value="0">-- <?= lang('Common.none') ?> --</option>
                         <?php foreach ($employees as $emp): ?>
                             <option value="<?= $emp->person_id ?>" <?= ($job->assigned_to ?? 0) == $emp->person_id ? 'selected' : '' ?>>
-                                <?= esc($emp->first_name . ' ' . $emp->last_name) ?>
+                                <?= esc($emp->first_name . ' ' . $emp->last_name) ?><?= in_array($emp->person_id, $on_leave_ids ?? [], true) ? ' (on leave today)' : '' ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -278,6 +419,20 @@ $(document).ready(function() {
                 }
             }
         });
+    });
+
+    $('.delete-attachment').on('click', function() {
+        if (! confirm('Remove this attachment?')) return;
+        var id = $(this).data('id');
+        $.post('<?= base_url('printjobs/delete_file') ?>/' + id, {
+            '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
+        }, function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert(response.message || 'Could not remove file.');
+            }
+        }, 'json');
     });
 });
 </script>

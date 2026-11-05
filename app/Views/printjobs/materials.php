@@ -68,7 +68,12 @@ $category_icons = [
                         <tbody>
                             <?php foreach ($items as $m): ?>
                             <tr class="<?= $m->current_stock <= $m->reorder_level ? 'warning' : '' ?>">
-                                <td><strong><?= esc($m->name) ?></strong></td>
+                                <td>
+                                    <strong><?= esc($m->name) ?></strong>
+                                    <?php if (! empty($m->item_id)): ?>
+                                        <span class="label label-info" style="font-size:0.7em;" title="Consumption draws from main POS stock">linked</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= esc($m->sku ?? '-') ?></td>
                                 <td>
                                     <?= number_format($m->current_stock, 2) ?> <?= esc($m->unit) ?>
@@ -80,6 +85,13 @@ $category_icons = [
                                 <td><?= to_currency($m->unit_cost) ?></td>
                                 <td><?= esc($m->supplier ?? '-') ?></td>
                                 <td>
+                                    <button class="btn btn-xs btn-success receive-material"
+                                        data-id="<?= $m->id ?>"
+                                        data-name="<?= esc($m->name) ?>"
+                                        data-unit="<?= esc($m->unit) ?>"
+                                        title="Receive Stock">
+                                        <i class="bi bi-box-arrow-in-down"></i> Receive
+                                    </button>
                                     <button class="btn btn-xs btn-default edit-material"
                                         data-id="<?= $m->id ?>"
                                         data-name="<?= esc($m->name) ?>"
@@ -90,6 +102,7 @@ $category_icons = [
                                         data-reorder="<?= $m->reorder_level ?>"
                                         data-cost="<?= $m->unit_cost ?>"
                                         data-supplier="<?= esc($m->supplier ?? '') ?>"
+                                        data-item="<?= $m->item_id ?? '' ?>"
                                         title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
@@ -118,6 +131,44 @@ $category_icons = [
     </div>
 </div>
 <?php endif; ?>
+
+<!-- Receive Stock Modal — a stock intake (e.g. a supplier delivery) that
+     adds to current_stock, without needing to re-enter the whole record. -->
+<div class="modal fade" id="receiveMaterialModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <?= form_open('printjobs/receive_material/0', ['class' => 'form-horizontal', 'id' => 'receive_material_form']) ?>
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Receive Stock — <span id="receive_material_name"></span></h4>
+            </div>
+            <div class="modal-body">
+                <div class="form-group form-group-sm">
+                    <label class="control-label col-xs-4">Quantity Received</label>
+                    <div class="col-xs-6">
+                        <div class="input-group">
+                            <input type="number" step="0.01" min="0.01" name="quantity_received" id="receive_quantity" class="form-control input-sm" required autofocus>
+                            <span class="input-group-addon" id="receive_unit_label"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label class="control-label col-xs-4">Unit Cost <small class="text-muted">(optional)</small></label>
+                    <div class="col-xs-6"><input type="number" step="0.01" min="0" name="unit_cost" class="form-control input-sm" placeholder="Leave blank to keep current"></div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label class="control-label col-xs-4">Supplier <small class="text-muted">(optional)</small></label>
+                    <div class="col-xs-6"><input type="text" name="supplier" class="form-control input-sm" placeholder="Leave blank to keep current"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-success">Receive Stock</button>
+            </div>
+            <?= form_close() ?>
+        </div>
+    </div>
+</div>
 
 <!-- Add/Edit Modal -->
 <div class="modal fade" id="addMaterialModal" tabindex="-1">
@@ -174,6 +225,18 @@ $category_icons = [
                     <label class="control-label col-xs-4">Supplier</label>
                     <div class="col-xs-7"><input type="text" name="supplier" id="material_supplier" class="form-control input-sm"></div>
                 </div>
+                <div class="form-group form-group-sm">
+                    <label class="control-label col-xs-4">Linked stock item</label>
+                    <div class="col-xs-7">
+                        <select name="item_id" id="material_item_id" class="form-control input-sm">
+                            <option value="">— Print store only (not sold) —</option>
+                            <?php foreach ($pos_items as $it): ?>
+                                <option value="<?= $it->item_id ?>"><?= esc($it->name) ?><?= $it->item_number ? ' [' . esc($it->item_number) . ']' : '' ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <span class="help-block" style="margin:2px 0 0;">When set, using this material deducts the item's main-location stock and books a Print Dept expense.</span>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Cancel</button>
@@ -197,6 +260,7 @@ $(document).ready(function() {
         $('#material_reorder').val($(this).data('reorder'));
         $('#material_cost').val($(this).data('cost'));
         $('#material_supplier').val($(this).data('supplier'));
+        $('#material_item_id').val($(this).data('item') || '');
         $('#addMaterialModal').modal('show');
     });
 
@@ -205,6 +269,18 @@ $(document).ready(function() {
         $('#modalTitle').text('Add Material');
         $('#material_id').val('');
         $('#material_form')[0].reset();
+    });
+
+    $('.receive-material').on('click', function() {
+        var id = $(this).data('id');
+        $('#receive_material_name').text($(this).data('name'));
+        $('#receive_unit_label').text($(this).data('unit'));
+        $('#receive_material_form').attr('action', $('#receive_material_form').attr('action').replace(/\/\d*$/, '/' + id));
+        $('#receiveMaterialModal').modal('show');
+    });
+
+    $('#receiveMaterialModal').on('hidden.bs.modal', function() {
+        $('#receive_material_form')[0].reset();
     });
 });
 </script>

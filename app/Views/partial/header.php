@@ -37,14 +37,14 @@ $request = Services::request();
         <link rel="stylesheet" href="resources/css/chartist-plugin-tooltip-2e0ec92e60.css">
         <link rel="stylesheet" href="resources/css/bootstrap-tagsinput-5a6d46a06c.css">
         <link rel="stylesheet" href="resources/css/bootstrap-toggle-e12db6c1f3.css">
-        <link rel="stylesheet" href="resources/css/bootstrap-4875cf7b0d.autocomplete.css">
-        <link rel="stylesheet" href="resources/css/invoice-a99a4dfac3.css">
-        <link rel="stylesheet" href="resources/css/ospos_print-bf10c1438b.css">
-        <link rel="stylesheet" href="resources/css/ospos-d0b91fdf8f.css">
-        <link rel="stylesheet" href="resources/css/popupbox-57d45cb822.css">
-        <link rel="stylesheet" href="resources/css/receipt-0606f1c54e.css">
-        <link rel="stylesheet" href="resources/css/register-e88ac141ce.css">
-        <link rel="stylesheet" href="resources/css/reports-ace7faf688.css">
+        <link rel="stylesheet" href="resources/css/bootstrap-292fc0ad3b.autocomplete.css">
+        <link rel="stylesheet" href="resources/css/invoice-1eae5e39b9.css">
+        <link rel="stylesheet" href="resources/css/ospos_print-2ba645b044.css">
+        <link rel="stylesheet" href="resources/css/ospos-9ead7561a7.css">
+        <link rel="stylesheet" href="resources/css/popupbox-7b616030b0.css">
+        <link rel="stylesheet" href="resources/css/receipt-a171207d8e.css">
+        <link rel="stylesheet" href="resources/css/register-32d6791f29.css">
+        <link rel="stylesheet" href="resources/css/reports-407b727797.css">
         <!-- endinject -->
         <!-- inject:debug:js -->
         <script src="resources/js/jquery-12e87d2f3a.js"></script>
@@ -78,9 +78,9 @@ $request = Services::request();
         <script src="resources/js/bootstrap-tagsinput-855a7c7670.js"></script>
         <script src="resources/js/bootstrap-toggle-1c7a19a049.js"></script>
         <script src="resources/js/clipboard-908af414ab.js"></script>
-        <script src="resources/js/imgpreview-1db063409f.full.jquery.js"></script>
-        <script src="resources/js/manage_tables-e5dae00ba1.js"></script>
-        <script src="resources/js/nominatim-89be77a11a.autocomplete.js"></script>
+        <script src="resources/js/imgpreview-62e42c15a0.full.jquery.js"></script>
+        <script src="resources/js/manage_tables-7a86e208b7.js"></script>
+        <script src="resources/js/nominatim-599d9d6f9c.autocomplete.js"></script>
         <!-- endinject -->
     <?php else : ?>
         <!--inject:prod:css -->

@@ -232,6 +232,8 @@ foreach ($payments as $payment_id => $payment) {
             <?= $barcode ?><br>
             <?= $sale_id ?>
         </div>
+
+        <?= view('partial/zimra_receipt_block', ['zimra' => $zimra ?? null]) ?>
     </div>
 </div>
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Libraries\BeamlinkSync;
 use App\Models\Externalpayment;
 use App\Models\Printjob;
 use App\Models\Sale;
@@ -658,6 +659,31 @@ class Webhook extends BaseController
     }
 
     /**
+     * GET /webhook/beamlink/pull-jobs
+     *
+     * Unauthenticated on purpose — the PHP built-in server only ever binds
+     * to 127.0.0.1 (see electron/main.cjs), so nothing off this machine can
+     * reach it anyway. This is what the Electron main process calls on a
+     * timer to pull new/updated print jobs from the ERP without needing a
+     * logged-in browser session (Printjobs::sync is the same action but
+     * gated behind login, for the manual "Sync" button).
+     */
+    public function pullPrintJobs()
+    {
+        if (! in_array($this->request->getIPAddress(), ['127.0.0.1', '::1'], true)) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'local only'])->setStatusCode(403);
+        }
+
+        $counts = $this->printJob->pullAndUpsertFromErp(new BeamlinkSync());
+
+        if ($counts === null) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'could not reach BeamLink ERP']);
+        }
+
+        return $this->response->setJSON(['status' => 'ok'] + $counts);
+    }
+
+    /**
      * POST /webhook/fusertech
      * Receive events from Fusertech clone on Vercel.
      */
@@ -671,17 +697,17 @@ class Webhook extends BaseController
 
             // Fusertech events can trigger local print jobs or stock updates
             if (($data['type'] ?? '') === 'print_order') {
+                $notes = trim(($data['description'] ?? '') . ($data['dimensions'] ?? '' ? ' (' . $data['dimensions'] . ')' : '') . ($data['customer_notes'] ?? '' ? "\n" . $data['customer_notes'] : ''));
+
                 $this->printJob->insert([
-                    'job_number'     => $this->printJob->generateJobNumber(),
-                    'job_type'       => $data['job_type'] ?? 'other',
-                    'description'    => $data['description'] ?? '',
-                    'dimensions'     => $data['dimensions'] ?? '',
-                    'quantity'       => (int) ($data['quantity'] ?? 1),
-                    'total'          => (float) ($data['total'] ?? 0),
-                    'customer_notes' => $data['customer_notes'] ?? '',
-                    'source'         => 'fusertech',
-                    'external_ref'   => $data['order_id'] ?? '',
-                    'status'         => 'draft',
+                    'job_number'   => $this->printJob->generateJobNumber(),
+                    'job_type'     => in_array($data['job_type'] ?? '', \App\Models\Printjob::JOB_TYPES, true) ? $data['job_type'] : 'other',
+                    'notes'        => $notes,
+                    'quantity'     => (int) ($data['quantity'] ?? 1),
+                    'total_cost'   => (float) ($data['total'] ?? 0),
+                    'source'       => 'fusertech',
+                    'external_ref' => $data['order_id'] ?? '',
+                    'status'       => 'pending',
                 ]);
             }
 
@@ -841,20 +867,34 @@ class Webhook extends BaseController
      */
     private function handleBeamLinkPrintJobUpdate(array $data): void
     {
-        $ref = $data['external_ref'] ?? '';
-        if (! $ref) {
+        $ref = (string) ($data['external_ref'] ?? ($data['id'] ?? ''));
+        if ($ref === '') {
             return;
         }
 
         $job = $this->printJob->where('external_ref', $ref)->first();
-        if ($job) {
-            $this->printJob->update($job->id, [
-                'status'         => $data['status'] ?? $job->status,
-                'total'          => $data['total'] ?? $job->total,
-                'internal_notes' => $data['notes'] ?? $job->internal_notes,
-                'assigned_to'    => $data['assigned_to'] ?? $job->assigned_to,
-                'completed_at'   => $data['completed_at'] ?? null,
-            ]);
+        if (! $job) {
+            return;
+        }
+
+        // assigned_to isn't carried over — the ERP's value is one of ITS
+        // own staff uuids, not a local employee id.
+        $update = [];
+        if (isset($data['status']) && in_array($data['status'], \App\Models\Printjob::STATUSES, true)) {
+            $update['status'] = $data['status'];
+        }
+        if (isset($data['total_cost'])) {
+            $update['total_cost'] = (float) $data['total_cost'];
+        }
+        if (isset($data['notes'])) {
+            $update['notes'] = $data['notes'];
+        }
+        if (isset($data['completed_at'])) {
+            $update['completed_at'] = $data['completed_at'];
+        }
+
+        if (! empty($update)) {
+            $this->printJob->update($job->id, $update);
         }
     }
 }

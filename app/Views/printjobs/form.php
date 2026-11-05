@@ -97,6 +97,58 @@ $served_by_name = $logged_in ? $logged_in->first_name . ' ' . mb_substr($logged_
                 </div>
             </div>
 
+            <?php $processes = $processes ?? []; ?>
+            <div class="form-group form-group-sm">
+                <label class="control-label col-xs-4"><?= lang('Printjobs.process') ?></label>
+                <div class="col-xs-7">
+                    <select name="process_id" id="process_id" class="form-control input-sm"
+                        data-selected="<?= (int) ($job->process_id ?? 0) ?>">
+                        <option value="">-- None --</option>
+                        <?php foreach ($processes as $proc): ?>
+                            <option value="<?= (int) $proc->id ?>"
+                                data-basis="<?= esc($proc->pricing_basis) ?>"
+                                data-coverage="<?= $proc->default_coverage_pct ?>"
+                                <?= ($job && (int) ($job->process_id ?? 0) === (int) $proc->id) ? 'selected' : '' ?>>
+                                <?= esc($proc->name) ?> (<?= $proc->pricing_basis === 'per_sheet' ? lang('Printjobs.sheets') : 'm²' ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted">DTF / UV / Xerox / Eco-solvent — drives the ink estimate &amp; suggested price</small>
+                </div>
+            </div>
+
+            <div class="form-group form-group-sm">
+                <label class="control-label col-xs-4"><?= lang('Printjobs.coverage') ?></label>
+                <div class="col-xs-3">
+                    <input type="number" name="coverage_pct" id="coverage_pct" class="form-control input-sm" min="1" max="300" step="1"
+                        value="<?= $job->coverage_pct ?? '' ?>" placeholder="auto">
+                </div>
+                <div class="col-xs-4" id="sheets_wrap" style="display:none;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon"><?= lang('Printjobs.sheets') ?></span>
+                        <input type="number" name="sheets" id="sheets" class="form-control input-sm" min="0" step="1"
+                            value="<?= $job->sheets ?? '' ?>">
+                    </div>
+                </div>
+            </div>
+
+            <?php $substrates = $substrates ?? []; ?>
+            <div class="form-group form-group-sm">
+                <label class="control-label col-xs-4"><?= lang('Printjobs.substrate') ?></label>
+                <div class="col-xs-7">
+                    <select name="substrate_material_id" id="substrate_material_id" class="form-control input-sm">
+                        <option value="">-- None / supplied by client --</option>
+                        <?php foreach ($substrates as $s): ?>
+                            <option value="<?= (int) $s->id ?>"
+                                <?= ($job && (int) ($job->material_id ?? 0) === (int) $s->id) ? 'selected' : '' ?>>
+                                <?= esc($s->name) ?> (<?= esc($s->unit) ?> · <?= to_currency($s->unit_cost) ?>/<?= esc($s->unit) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted">Vinyl / film / paper drawn from stock &amp; costed per m²</small>
+                </div>
+            </div>
+
             <div class="form-group form-group-sm">
                 <label class="control-label col-xs-4"><?= lang('Printjobs.machine') ?></label>
                 <div class="col-xs-7">
@@ -217,6 +269,27 @@ $served_by_name = $logged_in ? $logged_in->first_name . ' ' . mb_substr($logged_
                 </div>
             </div>
 
+            <div class="panel panel-info" id="estimate_panel" style="display:none; margin-bottom:12px;">
+                <div class="panel-heading" style="padding:6px 10px;">
+                    <strong><i class="glyphicon glyphicon-tint"></i> Cost &amp; price estimate</strong>
+                    <button type="button" class="btn btn-xs btn-default pull-right" id="apply_price_btn">Use suggested price</button>
+                </div>
+                <div class="panel-body" style="padding:8px 10px;">
+                    <table class="table table-condensed" style="margin-bottom:6px;">
+                        <tr><td><?= lang('Printjobs.area') ?></td><td class="text-right"><strong id="est_area">–</strong> m²</td></tr>
+                        <tr><td><?= lang('Printjobs.est_ink') ?> (<span id="est_ml">–</span> ml)</td><td class="text-right" id="est_cost">–</td></tr>
+                        <tr><td><?= lang('Printjobs.est_substrate_cost') ?> (<span id="est_sub_m2">–</span> m²)</td><td class="text-right" id="est_sub_cost">–</td></tr>
+                        <tr><td><?= lang('Printjobs.est_overhead') ?></td><td class="text-right" id="est_oh">–</td></tr>
+                        <tr><td><?= lang('Printjobs.est_spoilage') ?></td><td class="text-right" id="est_spoil">–</td></tr>
+                        <tr class="active"><td><strong><?= lang('Printjobs.est_total_cost') ?></strong></td><td class="text-right"><strong id="est_total">–</strong></td></tr>
+                        <tr><td><?= lang('Printjobs.suggested_price') ?></td><td class="text-right" id="est_price">–</td></tr>
+                        <tr><td><?= lang('Printjobs.floor_price') ?></td><td class="text-right" id="est_floor">–</td></tr>
+                        <tr><td><strong><?= lang('Printjobs.est_margin') ?></strong></td><td class="text-right"><strong id="est_margin">–</strong> <span class="text-muted" id="est_margin_pct"></span></td></tr>
+                    </table>
+                    <table class="table table-condensed table-striped" id="est_channels" style="margin-bottom:0; font-size:11px;"></table>
+                </div>
+            </div>
+
             <div class="form-group form-group-sm">
                 <label class="control-label col-xs-4"><?= lang('Printjobs.unit_cost') ?></label>
                 <div class="col-xs-4">
@@ -289,6 +362,8 @@ $served_by_name = $logged_in ? $logged_in->first_name . ' ' . mb_substr($logged_
 
 <script type="text/javascript">
 $(document).ready(function() {
+    var csrfName = '<?= csrf_token() ?>';
+
     // Auto-calculate total
     $('#quantity, #unit_cost').on('input', function() {
         var qty = parseFloat($('#quantity').val()) || 0;
@@ -307,6 +382,83 @@ $(document).ready(function() {
         var qty = parseFloat($('#quantity').val()) || 1;
         $('#total_cost').val((qty * price).toFixed(2));
     });
+
+    // ── Ink + suggested-price estimate ─────────────────────────────
+    var lastSuggested = 0;
+
+    function money(n) { return (parseFloat(n) || 0).toFixed(2); }
+
+    function toggleSheets() {
+        var basis = $('#process_id option:selected').data('basis');
+        $('#sheets_wrap').toggle(basis === 'per_sheet');
+    }
+
+    function refreshEstimate() {
+        var processId = parseInt($('#process_id').val(), 10) || 0;
+        if (!processId) { $('#estimate_panel').hide(); return; }
+
+        var payload = {
+            process_id:            processId,
+            width_mm:              $('input[name="width_mm"]').val() || 0,
+            height_mm:             $('input[name="height_mm"]').val() || 0,
+            quantity:              $('#quantity').val() || 1,
+            coverage_pct:          $('#coverage_pct').val() || '',
+            sheets:                $('#sheets').val() || '',
+            substrate_material_id: $('#substrate_material_id').val() || '',
+            charged_price:         $('#total_cost').val() || ''
+        };
+        payload[csrfName] = $('#printjob_form input[name="' + csrfName + '"]').val();
+
+        $.post('<?= site_url('printjobs/estimate') ?>', payload, function(res) {
+            if (!res || !res.success) { $('#estimate_panel').hide(); return; }
+            var e = res.estimate;
+            lastSuggested = e.suggested_price;
+
+            $('#est_area').text((e.area_m2 || 0).toFixed(4));
+            $('#est_ml').text((e.total_ml || 0).toFixed(1));
+            $('#est_cost').text(money(e.total_ink_cost));
+            $('#est_sub_m2').text(e.substrate ? (e.substrate.m2 || 0).toFixed(3) : '0');
+            $('#est_sub_cost').text(money(e.substrate_cost));
+            $('#est_oh').text(money(e.overhead_cost));
+            $('#est_spoil').text(money(e.spoilage_cost));
+            $('#est_total').text(money(e.total_cost));
+            $('#est_price').text(money(e.suggested_price));
+            $('#est_floor').text(money(e.floor_price));
+            $('#est_margin').text(money(e.margin));
+            $('#est_margin_pct').text('(' + (e.margin_pct || 0).toFixed(1) + '%)');
+            $('#est_margin').css('color', (e.margin < 0) ? '#a94442' : '');
+
+            var rows = '<tr><th>Line</th><th class="text-right">Qty</th><th class="text-right">Cost</th></tr>';
+            (e.channels || []).forEach(function(c) {
+                rows += '<tr><td>' + c.channel + (c.material_name ? '' : ' <span class=\"text-danger\">(no material)</span>') +
+                        '</td><td class="text-right">' + (c.ml || 0).toFixed(2) + ' ml' +
+                        '</td><td class="text-right">' + money(c.cost) + '</td></tr>';
+            });
+            if (e.substrate) {
+                rows += '<tr><td>' + (e.substrate.material_name || 'substrate') +
+                        '</td><td class="text-right">' + (e.substrate.m2 || 0).toFixed(3) + ' m²' +
+                        '</td><td class="text-right">' + money(e.substrate_cost) + '</td></tr>';
+            }
+            $('#est_channels').html(rows);
+            $('#estimate_panel').show();
+        }, 'json');
+    }
+
+    $('#apply_price_btn').on('click', function() {
+        if (lastSuggested > 0) {
+            $('#total_cost').val(lastSuggested.toFixed(2));
+            var qty = parseFloat($('#quantity').val()) || 1;
+            $('#unit_cost').val((lastSuggested / qty).toFixed(2));
+            refreshEstimate();
+        }
+    });
+
+    $('#process_id, #substrate_material_id').on('change', function() { toggleSheets(); refreshEstimate(); });
+    $('#coverage_pct, #sheets, #quantity, #total_cost, input[name="width_mm"], input[name="height_mm"]')
+        .on('input change', refreshEstimate);
+
+    toggleSheets();
+    refreshEstimate();
 });
 </script>
 

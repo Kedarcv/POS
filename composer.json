@@ -27,6 +27,7 @@
     "require": {
         "php": "^8.2",
         "ext-intl": "*",
+        "chillerlan/php-qrcode": "^6.0",
         "codeigniter4/framework": "4.7.2",
         "dompdf/dompdf": "^2.0.3",
         "ezyang/htmlpurifier": "^4.17",

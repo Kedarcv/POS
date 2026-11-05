@@ -309,10 +309,47 @@ echo form_dropdown(
             <fieldset>
                 <p><?= lang('Employees.permission_desc') ?></p>
 
+                <div class="form-group form-group-sm">
+                    <label class="control-label col-xs-3">Role</label>
+                    <div class="col-xs-6">
+                        <?= form_dropdown(
+                            'role_id',
+                            ['' => 'Custom (pick modules below)'] + array_column($all_roles ?? [], 'name', 'role_id'),
+                            (string) ($person_info->role_id ?? ''),
+                            'id="role_id" class="form-control input-sm"',
+                        ) ?>
+                    </div>
+                    <div class="col-xs-3">
+                        <span class="text-muted small">Picking a role checks the matching modules below for you — still editable before saving.</span>
+                        &middot; <a href="<?= base_url('roles') ?>" target="_blank">Manage roles</a>
+                    </div>
+                </div>
+
+                <script type="text/javascript">
+                    $(document).ready(function() {
+                        $('#role_id').change(function() {
+                            var roleId = $(this).val();
+                            if (!roleId) {
+                                return; // "Custom" — leave whatever's checked alone
+                            }
+
+                            $.get('<?= base_url('roles/permissions/') ?>' + roleId, function(response) {
+                                var granted = response.permission_ids || [];
+
+                                $('#permission_list input[type="checkbox"]').each(function() {
+                                    var $box = $(this);
+                                    var isGranted = granted.indexOf($box.val()) !== -1;
+                                    $box.prop('checked', isGranted).prop('disabled', false).trigger('change');
+                                });
+                            }, 'json');
+                        });
+                    });
+                </script>
+
                 <ul id="permission_list">
                     <?php foreach ($all_modules as $module) { ?>
                         <li>
-                            <?= form_checkbox("grant_{$module->module_id}", $module->module_id, $module->grant === 1, 'class="module"') ?>
+                            <?= form_checkbox("grant_{$module->module_id}", $module->module_id, $module->grant === true, 'class="module"') ?>
                             <?= form_dropdown(
                                 "menu_group_{$module->module_id}",
                                 [
@@ -337,7 +374,7 @@ echo form_dropdown(
                                         ?>
                                         <ul>
                                             <li>
-                                                <?= form_checkbox("grant_{$permission->permission_id}", $permission->permission_id, $permission->grant === 1) ?>
+                                                <?= form_checkbox("grant_{$permission->permission_id}", $permission->permission_id, $permission->grant === true) ?>
                                                 <?= form_hidden("menu_group_{$permission->permission_id}", '--') ?>
                                                 <span class="medium"><?= esc($lang_line) ?></span>
                                             </li>
@@ -364,15 +401,17 @@ echo form_dropdown(
         });
 
         $.validator.addMethod('module', function(value, element) {
-            var result = $('#permission_list input').is(':checked');
-            $('.module').each(function(index, element) {
-                var parent = $(element).parent();
-                var checked = $(element).is(':checked');
-                if ($('ul', parent).length > 0 && result) {
-                    result &= !checked || (checked && $('ul > li > input:checked', parent).length > 0);
-                }
-            });
-            return result;
+            // Scoped to this checkbox's own <li> only — a module that isn't
+            // checked, or has no sub-permissions at all, is always valid.
+            // (Previously this recomputed a single shared pass/fail across
+            // every module in the list and reported it identically against
+            // every module checkbox, so one unmet module produced the same
+            // error duplicated once per module in the form.)
+            var $li = $(element).closest('li');
+            if (!$(element).is(':checked') || $('ul', $li).length === 0) {
+                return true;
+            }
+            return $('ul > li > input:checked', $li).length > 0;
         }, "<?= lang('Employees.subpermission_required') ?>");
 
         $('ul#permission_list > li > input.module').each(function() {

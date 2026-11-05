@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\Tax_lib;
 use App\Models\Tax_jurisdiction;
 use CodeIgniter\HTTP\ResponseInterface;
 use Config\Services;
@@ -12,25 +13,29 @@ use Config\Services;
 class Tax_jurisdictions extends Secure_Controller
 {
     private Tax_jurisdiction $tax_jurisdiction;
+    private Tax_lib $tax_lib;
 
     public function __construct()
     {
         parent::__construct('tax_jurisdictions');
 
         $this->tax_jurisdiction = model(Tax_jurisdiction::class);
+        $this->tax_lib = new Tax_lib();
 
         helper('tax_helper');
     }
 
 
     /**
-     * @return string
+     * taxes/tax_jurisdictions.php is a tab of the combined Taxes management
+     * page (taxes/manage.php) and only ever renders correctly with the full
+     * data set Taxes::getIndex() assembles for all four tabs at once — trying
+     * to render it standalone here was missing most of that data. Send users
+     * to the real page, tab pre-selected.
      */
-    public function getIndex(): string
+    public function getIndex(): ResponseInterface
     {
-        $data['table_headers'] = get_tax_jurisdictions_table_headers();
-
-        return view('taxes/tax_jurisdictions', $data);
+        return redirect()->to(base_url('taxes') . '#tax_jurisdictions_tab');
     }
 
     /**
@@ -40,7 +45,8 @@ class Tax_jurisdictions extends Secure_Controller
      */
     public function getSearch(): ResponseInterface
     {
-        $search = $this->request->getGet('search');
+        // Absent search param -> null, but Tax_jurisdiction::search() requires a string.
+        $search = $this->request->getGet('search') ?? '';
         $limit  = $this->request->getGet('limit', FILTER_SANITIZE_NUMBER_INT);
         $offset = $this->request->getGet('offset', FILTER_SANITIZE_NUMBER_INT);
         $sort   = $this->sanitizeSortColumn(get_tax_jurisdictions_table_headers(), $this->request->getGet('sort', FILTER_SANITIZE_FULL_SPECIAL_CHARS), 'jurisdiction_id');

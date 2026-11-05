@@ -66,7 +66,13 @@ class Secure_Controller extends BaseController
             ? $this->module->get_allowed_home_modules($logged_in_employee_info->person_id)
             : $this->module->get_allowed_office_modules($logged_in_employee_info->person_id);
 
-        $this->global_view_data = [];
+        // Initialized even when zero modules are allowed for this menu group
+        // (e.g. an employee/role with no 'office'-or-'both' grants) — without
+        // this, the key is simply absent whenever the loop runs zero times,
+        // and every view that reads $allowed_modules (partial/header.php)
+        // hard-crashes with "Undefined variable" instead of just showing an
+        // empty menu.
+        $this->global_view_data = ['allowed_modules' => []];
         foreach ($allowed_modules->getResult() as $module) {
             $this->global_view_data['allowed_modules'][] = $module;
         }

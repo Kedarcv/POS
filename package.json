@@ -24,9 +24,11 @@
     ],
     "type": "module",
     "main": "electron/main.cjs",
+    "productName": "BeamLink POS",
     "scripts": {
         "build": "gulp default",
         "gulp": "gulp",
+        "electron:icon": "electron electron/make-icon.cjs",
         "electron:start": "electron .",
         "electron:dist": "electron-builder --win --mac",
         "electron:build-win": "electron-builder --win",
@@ -35,18 +37,21 @@
     "build": {
         "appId": "com.beamlink.pos",
         "productName": "BeamLink POS",
+        "copyright": "Copyright © 2010-2026 opensourcepos.org",
         "directories": {
-            "output": "dist/electron"
+            "output": "dist/electron",
+            "buildResources": "installer/assets"
         },
         "files": [
-            "electron/**/*",
+            "electron/main.cjs",
+            "electron/preload.cjs",
+            "electron/splash.html",
             "package.json"
         ],
         "extraResources": [
             "app/**/*",
             "public/**/*",
             "vendor/**/*",
-            "system/**/*",
             "writable/**/*",
             ".env.example",
             "spark",
@@ -54,10 +59,24 @@
             "installer/bin/php/**/*"
         ],
         "win": {
-            "target": "nsis"
+            "target": "nsis",
+            "icon": "installer/assets/icon.png",
+            "artifactName": "${productName} Setup ${version}.${ext}"
+        },
+        "nsis": {
+            "oneClick": false,
+            "perMachine": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "BeamLink POS",
+            "installerIcon": "installer/assets/icon.ico",
+            "uninstallerIcon": "installer/assets/icon.ico",
+            "deleteAppDataOnUninstall": false
         },
         "mac": {
             "target": "dmg",
+            "icon": "installer/assets/icon.png",
             "identity": null
         }
     },

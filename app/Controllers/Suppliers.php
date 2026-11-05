@@ -46,7 +46,8 @@ class Suppliers extends Persons
      **/
     public function getSearch(): ResponseInterface
     {
-        $search = $this->request->getGet('search');
+        // Absent search param -> null, but Supplier::search() requires a string.
+        $search = $this->request->getGet('search') ?? '';
         $limit = $this->request->getGet('limit', FILTER_SANITIZE_NUMBER_INT);
         $offset = $this->request->getGet('offset', FILTER_SANITIZE_NUMBER_INT);
         $sort = $this->sanitizeSortColumn(supplier_headers(), $this->request->getGet('sort', FILTER_SANITIZE_FULL_SPECIAL_CHARS), 'people.person_id');

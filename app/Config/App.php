@@ -298,6 +298,11 @@ class App extends BaseConfig
 
         $this->https_on = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') || (isset($_ENV['FORCE_HTTPS']) && $_ENV['FORCE_HTTPS'] == 'true');
 
+        if (is_cli()) {
+            $this->baseURL = $this->getEnvString('app.baseURL') ?? 'http://127.0.0.1:8080/';
+            return;
+        }
+
         $host = $this->getValidHost();
         $this->baseURL = $this->https_on ? 'https' : 'http';
         $this->baseURL .= '://' . $host;
@@ -353,8 +358,20 @@ class App extends BaseConfig
             return 'localhost';
         }
 
-        if (in_array($httpHost, $this->allowedHostnames, true)) {
-            return $httpHost;
+        // Compare against the whitelist by hostname alone — allowedHostnames
+        // holds bare names ("127.0.0.1"), but the actual Host header always
+        // includes the port for a non-default one (":8080" here), so this
+        // exact-match previously failed for every real request and silently
+        // fell back to the first whitelist entry ("localhost"). That mismatch
+        // between the page's real origin (127.0.0.1) and every generated URL
+        // (localhost) broke same-origin AJAX everywhere it's used — modal
+        // edit dialogs load blank because the browser blocks the cross-origin
+        // fetch. Callers (see setUpBaseURL below) append the port themselves,
+        // so this still returns the bare hostname on success, not $httpHost.
+        $hostnameOnly = explode(':', $httpHost, 2)[0];
+
+        if (in_array($hostnameOnly, $this->allowedHostnames, true)) {
+            return $hostnameOnly;
         }
 
         // Host not in whitelist - use first configured hostname as fallback

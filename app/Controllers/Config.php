@@ -334,10 +334,14 @@ class Config extends Secure_Controller
                 'rules' => [
                     'uploaded[company_logo]',
                     'is_image[company_logo]',
-                    'max_size[company_logo,1024]',
-                    'mime_in[company_logo,image/png,image/jpg,image/jpeg,image/gif]',
-                    'ext_in[company_logo,png,jpg,gif]',
-                    'max_dims[company_logo,800,680]',
+                    'max_size[company_logo,2048]',
+                    // Was missing image/webp entirely (a very common export
+                    // format now) and, on the extension side, ".jpeg" itself
+                    // — only ".jpg" was allowed, so a file literally named
+                    // "logo.jpeg" failed even though it's the same format.
+                    'mime_in[company_logo,image/png,image/jpeg,image/gif,image/webp,image/bmp]',
+                    'ext_in[company_logo,png,jpg,jpeg,gif,webp,bmp]',
+                    'max_dims[company_logo,2000,2000]',
                 ]
             ]
         ];

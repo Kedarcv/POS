@@ -24,6 +24,8 @@ return [
     'home_desc'                  => 'List home menu modules.',
     'laybys'                     => 'Laybys',
     'laybys_desc'                => 'Manage layby plans, installment payments, and customer debt.',
+    'leave'                      => 'Employee Leave',
+    'leave_desc'                 => 'Track employee time off and see who is available today.',
     'machines'                   => 'Print Machines',
     'machines_desc'              => 'Manage print machines, devices, and equipment.',
     'item_kits'                  => 'Item Kits',
@@ -51,5 +53,7 @@ return [
     'timeclocks'                 => '',
     'timeclocks_categories'      => '',
     'timeclocks_categories_desc' => '',
+    'zimra'                      => 'ZIMRA Fiscalisation',
+    'zimra_desc'                 => 'Register the till with ZIMRA, manage fiscal days, and monitor receipt submission.',
     'timeclocks_desc'            => '',
 ];

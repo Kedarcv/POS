@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>BeamLink POS</title>
+    <style>
+        :root { color-scheme: light; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #2c3e50;
+            color: #ecf0f1;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            user-select: none;
+            cursor: default;
+        }
+        .wrap {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            padding: 24px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        svg { width: 96px; height: 96px; }
+        h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: .2px; }
+        .status { margin: 0; font-size: 13px; opacity: .75; min-height: 18px; }
+        .bar {
+            width: 260px; height: 4px; border-radius: 2px;
+            background: rgba(255,255,255,.18); overflow: hidden;
+        }
+        .bar > i {
+            display: block; height: 100%; width: 40%; border-radius: 2px;
+            background: #18bc9c; animation: slide 1.4s ease-in-out infinite;
+        }
+        @keyframes slide {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(250%); }
+        }
+        .bar.done > i { animation: none; width: 100%; }
+        .error { color: #e74c3c; font-size: 12px; max-width: 380px; white-space: pre-wrap; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 308.57998 308.57997" aria-hidden="true">
+            <circle cx="154.28999" cy="154.28999" r="154.28999" fill="#fff"/>
+            <path fill="#2c3e50" d="M154.88998 145.66999c-.03-1.26-.03-3.29.19-4.29 4.6-11.1 15.57-18.82 28.3-18.82h.41v58.3c0 .12-.03.78-.04.9-.54 16.46-14.01 29.7-30.59 29.7v27.08c21 0 39.17-11.27 49.29-28.07l.07-.11c2.9.45 5.86.75 8.9.75 31.95 0 57.81-26 57.81-57.81 0-30.87-24.37-56.46-55.1-57.81h-30.74c-17.18 0-32.61 7.64-43.22 19.63-10.59-11.92-25.86-19.59-43.02-19.59-31.86 0-57.77 25.91-57.77 57.77 0 31.86 25.91 57.77 57.77 57.77 31.86 0 57.77-25.91 57.77-57.77zm-57.77 30.69c-16.92 0-30.69-13.77-30.69-30.69s13.77-30.69 30.69-30.69 30.69 13.77 30.69 30.69-13.77 30.69-30.69 30.69zm113.31 0h-.13v-61.38h.13c16.92 0 30.69 13.77 30.69 30.69s-13.77 30.69-30.69 30.69z"/>
+        </svg>
+        <h1>BeamLink POS</h1>
+        <div class="bar" id="bar"><i></i></div>
+        <p class="status" id="status">Starting&hellip;</p>
+        <p class="error" id="error"></p>
+    </div>
+    <script>
+        window.setStatus = function (text) {
+            document.getElementById('status').textContent = text;
+        };
+        window.setError = function (text) {
+            document.getElementById('bar').classList.add('done');
+            document.getElementById('status').textContent = 'Startup failed';
+            document.getElementById('error').textContent = text;
+        };
+    </script>
+</body>
+</html>

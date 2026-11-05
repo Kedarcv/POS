@@ -145,6 +145,23 @@ class Stock_location extends Model
     }
 
     /**
+     * The primary stock location - the first (lowest id) non-deleted location.
+     * Used where a location is needed without a logged-in user context or
+     * permission scoping (e.g. print-shop material consumption).
+     */
+    public function get_main_location_id(): int
+    {
+        $row = $this->db->table('stock_locations')
+            ->where('deleted', 0)
+            ->orderBy('location_id', 'asc')
+            ->limit(1)
+            ->get()
+            ->getRow();
+
+        return $row !== null ? (int)$row->location_id : 1;
+    }
+
+    /**
      * @param int $location_id
      * @return string
      */

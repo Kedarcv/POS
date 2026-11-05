@@ -289,11 +289,15 @@ gulp.task('copy-menubar', function() {
     pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/smartphone.svg"),rename("messages.svg"),gulp.dest("public/images/menubar"));
     pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/tools.svg"),rename("migrate.svg"),gulp.dest("public/images/menubar"));
     pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/door.svg"),rename("office.svg"),gulp.dest("public/images/menubar"));
+    pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/creditcard.svg"),rename("laybys.svg"),gulp.dest("public/images/menubar"));
+    pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/toolbox.svg"),rename("machines.svg"),gulp.dest("public/images/menubar"));
+    pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/document.svg"),rename("printjobs.svg"),gulp.dest("public/images/menubar"));
     pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/dolly.svg"),rename("receivings.svg"),gulp.dest("public/images/menubar"));
     pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/bar-chart.svg"),rename("reports.svg"),gulp.dest("public/images/menubar"));
     pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/cart.svg"),rename("sales.svg"),gulp.dest("public/images/menubar"));
     pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/briefcase.svg"),rename("suppliers.svg"),gulp.dest("public/images/menubar"));
-    return pipeline(gulp.src('./node_modules/elegant-circles/svg/full-color/money.svg'),rename("taxes.svg"),gulp.dest("public/images/menubar"));
+    pipeline(gulp.src('./node_modules/elegant-circles/svg/full-color/money.svg'),rename("taxes.svg"),gulp.dest("public/images/menubar"));
+    return pipeline(gulp.src("./node_modules/elegant-circles/svg/full-color/security.svg"),rename("zimra.svg"),gulp.dest("public/images/menubar"));
 });
 
 

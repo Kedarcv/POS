@@ -29,7 +29,9 @@ class ImportStock extends BaseCommand
     public function run(array $params): void
     {
         $filePath = $params['file'] ?? WRITEPATH . '../stock-data/STOCK.XLS';
-        $dryRun   = isset($params['dry']);
+        // A value-less flag like --dry is passed through with a null value,
+        // so isset() (which treats null as "not set") always missed it.
+        $dryRun   = array_key_exists('dry', $params);
 
         if (! file_exists($filePath)) {
             CLI::error("File not found: {$filePath}");
@@ -42,7 +44,11 @@ class ImportStock extends BaseCommand
         try {
             $spreadsheet = IOFactory::load($filePath);
             $sheet       = $spreadsheet->getActiveSheet();
-            $rows        = $sheet->toArray(null, true, true, true);
+            // formatData = FALSE: read the underlying cell values, not the text
+            // the cell's number-format mask renders. A currency/grouping mask
+            // ("$#,##0.00", "#,##0") otherwise reaches us as "1,234.56" and
+            // (float) "1,234.56" === 1.0 — silently corrupting every price.
+            $rows = $sheet->toArray(null, true, false, true);
         } catch (Exception $e) {
             CLI::error('Failed to read file: ' . $e->getMessage());
 
@@ -101,8 +107,10 @@ class ImportStock extends BaseCommand
                 $sku = (string) (int) $sku;
             }
 
-            $qty  = (int) (float) $qtyRaw;
-            $cost = round((float) $costRaw, 2);
+            // Belt and braces: even reading raw values, tolerate a stray
+            // currency symbol or thousands separator sneaking in as text.
+            $qty  = (int) round($this->toNumber($qtyRaw));
+            $cost = round($this->toNumber($costRaw), 2);
 
             $itemsData[] = [
                 'name'          => $details,
@@ -137,10 +145,13 @@ class ImportStock extends BaseCommand
         $maxItem = $db->query('SELECT MAX(item_id) as mid FROM ospos_items')->getRow();
         $nextId  = (int) ($maxItem->mid ?? 0) + 1;
 
-        $itemsTable = $db->table('items');
-        $qtyTable   = $db->table('item_quantities');
-        $batch      = [];
-        $qtyBatch   = [];
+        $itemsTable     = $db->table('items');
+        $qtyTable       = $db->table('item_quantities');
+        $inventoryTable = $db->table('inventory');
+        $batch          = [];
+        $qtyBatch       = [];
+        $invBatch       = [];
+        $now            = date('Y-m-d H:i:s');
 
         foreach ($itemsData as $item) {
             $batch[] = [
@@ -173,14 +184,30 @@ class ImportStock extends BaseCommand
                 'quantity'    => $item['quantity'],
             ];
 
+            // The Items list inner-joins ospos_inventory to show each item's
+            // transaction history, so an item with no inventory row at all
+            // (as items created straight via SQL are, unlike the admin UI's
+            // "Add Item" form) never appears in the list — even though it
+            // exists and is otherwise fully usable everywhere else.
+            $invBatch[] = [
+                'trans_items'     => $nextId,
+                'trans_user'      => 1,
+                'trans_date'      => $now,
+                'trans_comment'   => 'Initial stock import',
+                'trans_location'  => 1,
+                'trans_inventory' => $item['quantity'],
+            ];
+
             $nextId++;
             $imported++;
 
             if (count($batch) >= 100) {
                 $itemsTable->insertBatch($batch);
                 $qtyTable->insertBatch($qtyBatch);
+                $inventoryTable->insertBatch($invBatch);
                 $batch    = [];
                 $qtyBatch = [];
+                $invBatch = [];
                 CLI::write("  Imported {$imported} items...", 'white');
             }
         }
@@ -188,11 +215,38 @@ class ImportStock extends BaseCommand
         if (! empty($batch)) {
             $itemsTable->insertBatch($batch);
             $qtyTable->insertBatch($qtyBatch);
+            $inventoryTable->insertBatch($invBatch);
         }
 
         CLI::write("\n=== IMPORT COMPLETE ===", 'green');
         CLI::write("Items imported: {$imported}", 'green');
         CLI::write("Items skipped:  {$skipped}", 'yellow');
         CLI::write('Categories:     ' . count($categories), 'green');
+    }
+
+    /**
+     * Coerce a spreadsheet cell to a float. Numeric cells arrive already typed;
+     * a value that reaches us as text (currency symbol, thousands separators,
+     * stray spaces) is stripped down to digits, a single decimal point and a
+     * leading sign. Assumes '.' is the decimal separator (matches the source
+     * files); a comma is treated as a thousands separator and removed.
+     */
+    private function toNumber(mixed $value): float
+    {
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+
+        $clean = preg_replace('/[^0-9.\-]/', '', (string) $value);
+
+        // Keep only the first '.' and a leading '-'.
+        $negative = str_starts_with($clean, '-');
+        $clean    = str_replace('-', '', $clean);
+        $firstDot = strpos($clean, '.');
+        if ($firstDot !== false) {
+            $clean = substr($clean, 0, $firstDot + 1) . str_replace('.', '', substr($clean, $firstDot + 1));
+        }
+
+        return ($negative ? -1 : 1) * (float) $clean;
     }
 }

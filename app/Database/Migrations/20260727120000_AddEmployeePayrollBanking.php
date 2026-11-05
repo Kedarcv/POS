@@ -25,7 +25,7 @@ class AddEmployeePayrollBanking extends Migration
                 ADD COLUMN `bank_branch` varchar(150) DEFAULT NULL AFTER `bank_name`,
                 ADD COLUMN `account_number` varchar(50) DEFAULT NULL AFTER `bank_branch`,
                 ADD COLUMN `account_name` varchar(150) DEFAULT NULL AFTER `account_number`,
-                ADD COLUMN `payment_method` varchar(30) DEFAULT 'bank_transfer' AFTER `account_name`,
+                ADD COLUMN `payment_method` varchar(30) DEFAULT 'bank_transfer' AFTER `account_name`
                 SQL,
         );
 

@@ -18,8 +18,58 @@ class Expense_category extends Model
     protected $allowedFields = [
         'category_name',
         'category_description',
+        'is_internal',
         'deleted'
     ];
+
+    /**
+     * Name of the seeded category that internal print-shop material consumption
+     * is booked against. @see Migration LinkPrintMaterialsToStock
+     */
+    public const PRINT_MATERIALS_CATEGORY = 'Print Dept - Materials';
+
+    /**
+     * Resolves (and lazily creates) the "Print Dept - Materials" category id used
+     * when the print team draws stock materials for a job.
+     */
+    public function get_print_materials_category_id(): int
+    {
+        $builder = $this->db->table('expense_categories');
+        $row = $builder->where('category_name', self::PRINT_MATERIALS_CATEGORY)
+            ->where('deleted', 0)
+            ->get()
+            ->getRow();
+
+        if ($row !== null) {
+            return (int)$row->expense_category_id;
+        }
+
+        $builder->insert([
+            'category_name'        => self::PRINT_MATERIALS_CATEGORY,
+            'category_description' => 'Print-shop consumption of stock materials. Internal transfer - excluded from P&L.',
+            'is_internal'          => 1,
+            'deleted'              => 0,
+        ]);
+
+        return (int)$this->db->insertID();
+    }
+
+    /**
+     * Ids of categories flagged as internal transfers - excluded from P&L-style
+     * expense reporting.
+     *
+     * @return list<int>
+     */
+    public function get_internal_category_ids(): array
+    {
+        $rows = $this->db->table('expense_categories')
+            ->select('expense_category_id')
+            ->where('is_internal', 1)
+            ->get()
+            ->getResultArray();
+
+        return array_map('intval', array_column($rows, 'expense_category_id'));
+    }
 
     /**
      * Determines if a given Expense_id is an Expense category

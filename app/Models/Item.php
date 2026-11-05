@@ -1077,10 +1077,21 @@ class Item extends Model
         $builder->where('item_id', $item_id);
         $builder->join('stock_locations', 'stock_locations.location_id=item_quantities.location_id');
         $builder->where('stock_locations.deleted', 0);
-        $old_total_quantity = $builder->get()->getRow()->quantity;
+        // SUM() is NULL when the item has no quantity rows at a live location.
+        $old_total_quantity = (float) ($builder->get()->getRow()->quantity ?? 0);
 
         $total_quantity = $old_total_quantity + $items_received;
-        $average_price = bcdiv(bcadd(bcmul((string)$items_received, (string)$new_price), bcmul((string)$old_total_quantity, (string)$old_price)), (string)$total_quantity);
+
+        // A weighted average only makes sense when there is positive stock to
+        // average against and the result won't divide by zero (or a sliver).
+        // Oversold items (negative on-hand) otherwise blow the cost price up to
+        // an absurd number, or crash on a zero divisor. Fall back to the price
+        // actually paid on this receiving.
+        if ($old_total_quantity <= 0 || $total_quantity <= 0) {
+            $average_price = (string) $new_price;
+        } else {
+            $average_price = bcdiv(bcadd(bcmul((string)$items_received, (string)$new_price), bcmul((string)$old_total_quantity, (string)$old_price)), (string)$total_quantity);
+        }
 
         $data = ['cost_price' => $average_price];
 

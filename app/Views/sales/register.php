@@ -166,7 +166,16 @@ helper('url');
                         <tr>
                             <td>
                                 <?php
-                                echo anchor("$controller_name/deleteItem/$line", '<span class="glyphicon glyphicon-trash"></span>');
+                                // deleteItem is a POST-only route; the plain GET link this
+                                // anchor() produced was never actually reachable — the
+                                // .delete_item_button click handler below is what's supposed
+                                // to intercept it and POST instead, but it needs this class
+                                // and data-item-id to find the element at all.
+                                echo anchor(
+                                    "$controller_name/deleteItem/$line",
+                                    '<span class="glyphicon glyphicon-trash"></span>',
+                                    ['class' => 'delete_item_button', 'data-item-id' => $line],
+                                );
                                 echo form_hidden('location', (string)$item['item_location']);
                                 echo form_input(['type' => 'hidden', 'name' => 'item_id', 'value' => $item['item_id']]);
                                 ?>
@@ -542,6 +551,21 @@ helper('url');
             </div>
             <?= form_close() ?>
 
+            <?php // Reprints the receipt for the last sale rung up by this employee — a
+                  // jammed/skipped print or a customer asking for another copy shouldn't
+                  // mean digging through Sales > Manage. Opens in a new tab so it doesn't
+                  // disturb whatever's currently in the cart.
+                  //
+                  // #buttons_sale above is all pull-left/pull-right floats with no
+                  // clearfix, so its parent collapses to ~0 height — without clearing
+                  // that float here first, this row renders on top of Suspend/Cancel
+                  // instead of below them. ?>
+            <div class="form-group" style="clear: both; margin-top: 8px;">
+                <a href="<?= site_url('sales/reprint_last') ?>" target="_blank" class="btn btn-sm btn-default btn-block">
+                    <span class="glyphicon glyphicon-print">&nbsp;</span> Print Last Receipt
+                </a>
+            </div>
+
             <?php if ($payments_cover_total || !$pos_mode) { // Only show this part if the payment cover the total ?>
                 <div class="container-fluid">
                     <div class="no-gutter row">
@@ -631,7 +655,8 @@ helper('url');
             $.post("<?= site_url('sales/removeCustomer'); ?>", redirect);
         });
 
-        $(".delete_item_button").click(function() {
+        $(".delete_item_button").click(function(e) {
+            e.preventDefault(); // otherwise the anchor's own GET href fires too, and deleteItem is POST-only
             const item_id = $(this).data('item-id');
             $.post("<?= site_url('sales/deleteItem/'); ?>" + item_id, redirect);
         });
@@ -1034,6 +1059,7 @@ helper('url');
                     <input type="text" id="ecocash_phone" class="form-control" placeholder="<?= lang('Sales.ecocash_phone_hint') ?>" required>
                     <small class="text-muted">EcoCash will send a payment prompt to this number</small>
                 </div>
+                <div id="ecocash_status" class="alert alert-info" style="display:none;"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
@@ -1156,7 +1182,74 @@ $('#pesepay_confirm').click(function() {
     $('#add_payment_form').submit();
 });
 
-// EcoCash confirm
+// EcoCash confirm — sends the USSD push, then actually waits (polling
+// sales/check_ecocash) for the customer to approve it on their phone before
+// completing the sale. It used to treat "prompt sent" as "paid" and finish
+// the sale immediately, which both completed sales the customer never
+// actually approved, and separately fed the gateway's hyphenated
+// clientCorrelator (e.g. "POS-1735500000-123") straight into #reference_code,
+// which fails the alpha_numeric-only validation on submit.
+var ecocashPollTimer = null;
+var ecocashPollDeadline = null;
+const ECOCASH_POLL_INTERVAL_MS = 4000;
+const ECOCASH_POLL_TIMEOUT_MS = 90000; // typical USSD prompt expiry
+
+function stopEcocashPolling() {
+    if (ecocashPollTimer) {
+        clearTimeout(ecocashPollTimer);
+        ecocashPollTimer = null;
+    }
+}
+
+function ecocashSanitizedReference(clientCorrelator, phone) {
+    var base = 'ECO' + (clientCorrelator || phone || '').replace(/[^a-zA-Z0-9]/g, '');
+    return base.slice(0, 20);
+}
+
+function ecocashComplete(refCode) {
+    stopEcocashPolling();
+    $('#reference_code').val(refCode);
+    $('#ecocash_modal').modal('hide');
+    $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+    $('#add_payment_form').submit();
+}
+
+function ecocashFail(message) {
+    stopEcocashPolling();
+    $('#ecocash_status').removeClass('alert-info').addClass('alert-danger')
+        .text(message || 'EcoCash payment was not completed.');
+    $('#ecocash_confirm').prop('disabled', false).html('<i class="glyphicon glyphicon-ok"></i> <?= esc(lang('Sales.initiate_ecocash'), 'js') ?>');
+    $('#ecocash_phone').prop('disabled', false);
+}
+
+function pollEcocashStatus(phone, clientCorrelator, refCode) {
+    if (Date.now() > ecocashPollDeadline) {
+        ecocashFail('Customer did not respond to the prompt in time. Ask them to check their phone, or try again.');
+        return;
+    }
+
+    $.ajax({
+        url: "<?= site_url('sales/check_ecocash') ?>/" + encodeURIComponent(phone) + "/" + encodeURIComponent(clientCorrelator),
+        type: 'GET',
+        dataType: 'json',
+        success: function(res) {
+            if (res.complete) {
+                $('#ecocash_status').text('Payment confirmed — completing sale...');
+                ecocashComplete(refCode);
+            } else if (res.success === false) {
+                ecocashFail('EcoCash payment failed: ' + (res.message || 'declined or cancelled.'));
+            } else {
+                // still pending — keep waiting
+                ecocashPollTimer = setTimeout(function() { pollEcocashStatus(phone, clientCorrelator, refCode); }, ECOCASH_POLL_INTERVAL_MS);
+            }
+        },
+        error: function() {
+            // Transient network hiccup while polling — keep trying until the deadline rather than failing the sale outright.
+            ecocashPollTimer = setTimeout(function() { pollEcocashStatus(phone, clientCorrelator, refCode); }, ECOCASH_POLL_INTERVAL_MS);
+        }
+    });
+}
+
 $('#ecocash_confirm').click(function() {
     var phone = $('#ecocash_phone').val();
     if (!phone || phone.length < 7) {
@@ -1165,8 +1258,10 @@ $('#ecocash_confirm').click(function() {
     }
     var amountDue = $('#amount_tendered').val() || 0;
     var $btn = $(this);
-    var origText = $btn.html();
     $btn.prop('disabled', true).html('<i class="glyphicon glyphicon-refresh glyphicon-spin"></i> Sending prompt to customer phone...');
+    $('#ecocash_phone').prop('disabled', true);
+    $('#ecocash_status').removeClass('alert-danger').addClass('alert-info')
+        .text('Sending payment prompt...').show();
 
     $.ajax({
         url: "<?= site_url('sales/initiate_ecocash') ?>",
@@ -1178,27 +1273,28 @@ $('#ecocash_confirm').click(function() {
         },
         dataType: 'json',
         success: function(res) {
-            $btn.prop('disabled', false).html(origText);
-            if (res.success || res.status === 'PENDING' || res.status === 'COMPLETED' || res.status === 'SUCCESS') {
-                var refCode = res.clientCorrelator || ('ECO-' + phone);
-                $('#reference_code').val(refCode);
-                $('#ecocash_modal').modal('hide');
-                $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
-                $('#add_payment_form').submit();
+            if (res.success && res.clientCorrelator) {
+                var refCode = ecocashSanitizedReference(res.clientCorrelator, phone);
+                $btn.html('<i class="glyphicon glyphicon-refresh glyphicon-spin"></i> Waiting for customer to approve on their phone...');
+                $('#ecocash_status').text('Prompt sent — waiting for the customer to approve it on their phone...');
+                ecocashPollDeadline = Date.now() + ECOCASH_POLL_TIMEOUT_MS;
+                pollEcocashStatus(res.phone || phone, res.clientCorrelator, refCode);
             } else {
-                alert('EcoCash Payment Failed: ' + (res.message || 'Could not initiate transaction.'));
+                ecocashFail(res.message || 'Could not initiate transaction.');
             }
         },
-        error: function(xhr, status, err) {
-            $btn.prop('disabled', false).html(origText);
-            // Fallback: allow manual confirmation if EcoCash API is unreachable offline
-            var refCode = 'ECO-' + phone;
-            $('#reference_code').val(refCode);
-            $('#ecocash_modal').modal('hide');
-            $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
-            $('#add_payment_form').submit();
+        error: function() {
+            ecocashFail('Could not reach the payment gateway. Check the connection and try again.');
         }
     });
+});
+
+// Stop any in-flight polling if the cashier closes the modal without waiting it out.
+$('#ecocash_modal').on('hidden.bs.modal', function() {
+    stopEcocashPolling();
+    $('#ecocash_confirm').prop('disabled', false).html('<i class="glyphicon glyphicon-ok"></i> <?= esc(lang('Sales.initiate_ecocash'), 'js') ?>');
+    $('#ecocash_phone').prop('disabled', false);
+    $('#ecocash_status').hide();
 });
 
 // Card confirm

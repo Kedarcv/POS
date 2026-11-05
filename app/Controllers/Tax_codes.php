@@ -23,21 +23,15 @@ class Tax_codes extends Secure_Controller
 
 
     /**
-     * @return string
+     * taxes/tax_codes.php is a tab of the combined Taxes management page
+     * (taxes/manage.php) and only ever renders correctly with the full data
+     * set Taxes::getIndex() assembles for all four tabs at once — trying to
+     * render it standalone here was missing most of that data. Send users
+     * to the real page, tab pre-selected.
      */
-    public function getIndex(): string
+    public function getIndex(): ResponseInterface
     {
-        return view('taxes/tax_codes', $this->get_data());
-    }
-
-    /**
-     * @return array
-     */
-    public function get_data(): array
-    {
-
-        $data['table_headers'] = get_tax_code_table_headers();
-        return $data;
+        return redirect()->to(base_url('taxes') . '#tax_codes_tab');
     }
 
     /**
@@ -47,7 +41,8 @@ class Tax_codes extends Secure_Controller
      */
     public function getSearch(): ResponseInterface
     {
-        $search = $this->request->getGet('search');
+        // Absent search param -> null, but Tax_code::search() requires a string.
+        $search = $this->request->getGet('search') ?? '';
         $limit  = $this->request->getGet('limit', FILTER_SANITIZE_NUMBER_INT);
         $offset = $this->request->getGet('offset', FILTER_SANITIZE_NUMBER_INT);
         $sort   = $this->sanitizeSortColumn(get_tax_code_table_headers(), $this->request->getGet('sort', FILTER_SANITIZE_FULL_SPECIAL_CHARS), 'tax_code');

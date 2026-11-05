@@ -24,7 +24,8 @@ class Employees extends Persons
      */
     public function getSearch(): ResponseInterface
     {
-        $search = $this->request->getGet('search');
+        // Absent search param -> null, but Employee::search() requires a string.
+        $search = $this->request->getGet('search') ?? '';
         $limit  = $this->request->getGet('limit', FILTER_SANITIZE_NUMBER_INT);
         $offset = $this->request->getGet('offset', FILTER_SANITIZE_NUMBER_INT);
         $sort   = $this->sanitizeSortColumn(person_headers(), $this->request->getGet('sort', FILTER_SANITIZE_FULL_SPECIAL_CHARS), 'people.person_id');
@@ -100,6 +101,7 @@ class Employees extends Persons
             $permissions[] = $permission;
         }
         $data['all_subpermissions'] = $permissions;
+        $data['all_roles']          = model(\App\Models\Role::class)->getActive();
 
         return view('employees/form', $data);
     }
@@ -171,7 +173,12 @@ class Employees extends Persons
                 'hash_version'      => 2,
                 'language_code'     => $exploded[0],
                 'language'          => $exploded[1],
-                'employee_id'       => $this->request->getPost('employee_id', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
+                // employees.employee_id has a UNIQUE index; the empty
+                // string getPost() returns when the field is left blank is
+                // still a real value there (unlike NULL), so a second
+                // employee with it left blank hit a duplicate-key error and
+                // couldn't be saved at all.
+                'employee_id'       => $this->request->getPost('employee_id', FILTER_SANITIZE_FULL_SPECIAL_CHARS) ?: null,
                 'department'        => $this->request->getPost('department', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
                 'job_title'         => $this->request->getPost('job_title', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
                 'employment_date'   => $this->request->getPost('employment_date') ?: null,
@@ -183,6 +190,7 @@ class Employees extends Persons
                 'account_number'    => $this->request->getPost('account_number', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
                 'account_name'      => $this->request->getPost('account_name', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
                 'payment_method'    => $this->request->getPost('payment_method', FILTER_SANITIZE_FULL_SPECIAL_CHARS) ?: 'bank_transfer',
+                'role_id'           => $this->request->getPost('role_id') ?: null,
             ];
         } else { // Password not changed
             $exploded      = explode(':', $this->request->getPost('language', FILTER_SANITIZE_FULL_SPECIAL_CHARS));
@@ -190,7 +198,12 @@ class Employees extends Persons
                 'username'          => $this->request->getPost('username', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
                 'language_code'     => $exploded[0],
                 'language'          => $exploded[1],
-                'employee_id'       => $this->request->getPost('employee_id', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
+                // employees.employee_id has a UNIQUE index; the empty
+                // string getPost() returns when the field is left blank is
+                // still a real value there (unlike NULL), so a second
+                // employee with it left blank hit a duplicate-key error and
+                // couldn't be saved at all.
+                'employee_id'       => $this->request->getPost('employee_id', FILTER_SANITIZE_FULL_SPECIAL_CHARS) ?: null,
                 'department'        => $this->request->getPost('department', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
                 'job_title'         => $this->request->getPost('job_title', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
                 'employment_date'   => $this->request->getPost('employment_date') ?: null,
@@ -202,6 +215,7 @@ class Employees extends Persons
                 'account_number'    => $this->request->getPost('account_number', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
                 'account_name'      => $this->request->getPost('account_name', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
                 'payment_method'    => $this->request->getPost('payment_method', FILTER_SANITIZE_FULL_SPECIAL_CHARS) ?: 'bank_transfer',
+                'role_id'           => $this->request->getPost('role_id') ?: null,
             ];
         }
 

@@ -235,6 +235,8 @@ if (isset($error_message)) {
             <img style="padding-top: 4%;" alt="<?= esc($barcode) ?>" src="data:image/png;base64,<?= esc($barcode) ?>"><br>
             <?= $sale_id ?>
         </div>
+
+        <?= view('partial/zimra_receipt_block', ['zimra' => $zimra ?? null]) ?>
     </div>
 </div>
 

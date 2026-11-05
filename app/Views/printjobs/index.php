@@ -80,6 +80,9 @@ $type_labels = [
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0;"><i class="glyphicon glyphicon-print"></i> <?= esc($title) ?></h3>
             <div>
+                <a href="<?= base_url('printjobs/myjobs') ?>" class="btn btn-default btn-sm">
+                    <i class="glyphicon glyphicon-user"></i> My Jobs
+                </a>
                 <a href="<?= base_url('printjobs/materials') ?>" class="btn btn-default btn-sm">
                     <i class="glyphicon glyphicon-folder-open"></i> <?= lang('Printjobs.materials') ?>
                 </a>
@@ -88,6 +91,12 @@ $type_labels = [
                 </a>
                 <a href="<?= base_url('printjobs/pricing') ?>" class="btn btn-default btn-sm">
                     <i class="glyphicon glyphicon-usd"></i> <?= lang('Printjobs.pricing') ?>
+                </a>
+                <a href="<?= base_url('printjobs/processes') ?>" class="btn btn-default btn-sm">
+                    <i class="glyphicon glyphicon-tint"></i> <?= lang('Printjobs.processes') ?>
+                </a>
+                <a href="<?= base_url('printjobs/settings') ?>" class="btn btn-default btn-sm">
+                    <i class="glyphicon glyphicon-cog"></i> <?= lang('Printjobs.settings') ?>
                 </a>
                 <a href="<?= base_url('printjobs/sync') ?>" class="btn btn-info btn-sm" title="Pull jobs from BeamLink ERP">
                     <i class="glyphicon glyphicon-refresh"></i> Sync from ERP

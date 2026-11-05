@@ -98,7 +98,11 @@ class Items extends Secure_Controller
      */
     public function getSearch(): ResponseInterface
     {
-        $search = $this->request->getGet('search', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        // getGet() returns null when the param is absent (e.g. the first page
+        // load, before anyone's typed a search term), but Item::search()'s
+        // $search parameter is a non-nullable string — null crashed every
+        // list load with an empty search box, i.e. every list load by default.
+        $search = $this->request->getGet('search', FILTER_SANITIZE_FULL_SPECIAL_CHARS) ?? '';
         $limit  = $this->request->getGet('limit', FILTER_SANITIZE_NUMBER_INT);
         $offset = $this->request->getGet('offset', FILTER_SANITIZE_NUMBER_INT);
         $sort   = $this->sanitizeSortColumn(item_headers(), $this->request->getGet('sort', FILTER_SANITIZE_FULL_SPECIAL_CHARS), 'item_id');
@@ -593,7 +597,10 @@ class Items extends Secure_Controller
         $upload_data    = $this->upload_image();
         $upload_success = empty($upload_data['error']);
 
-        $raw_receiving_quantity = $this->request->getPost('receiving_quantity');
+        // getPost() -> null when the field is absent, but parse_quantity()
+        // requires a string; the real Add Item form always sends this field,
+        // but a missing/incomplete request shouldn't 500 the whole save.
+        $raw_receiving_quantity = $this->request->getPost('receiving_quantity') ?? '0';
 
         $receiving_quantity = parse_quantity($raw_receiving_quantity);
         $item_type          = $this->request->getPost('item_type') === null ? ITEM : (int) ($this->request->getPost('item_type'));
@@ -604,9 +611,9 @@ class Items extends Secure_Controller
 
         $default_pack_name = lang('Items.default_pack_name');
 
-        $cost_price    = parse_decimals($this->request->getPost('cost_price'));
-        $unit_price    = parse_decimals($this->request->getPost('unit_price'));
-        $reorder_level = parse_quantity($this->request->getPost('reorder_level'));
+        $cost_price    = parse_decimals($this->request->getPost('cost_price') ?? '0');
+        $unit_price    = parse_decimals($this->request->getPost('unit_price') ?? '0');
+        $reorder_level = parse_quantity($this->request->getPost('reorder_level') ?? '0');
         $qty_per_pack  = parse_quantity($this->request->getPost('qty_per_pack') ?? '');
 
         // Save item data
@@ -664,8 +671,8 @@ class Items extends Secure_Controller
 
             if (! $use_destination_based_tax) {
                 $items_taxes_data = [];
-                $tax_names        = $this->request->getPost('tax_names');
-                $tax_percents     = $this->request->getPost('tax_percents');
+                $tax_names        = $this->request->getPost('tax_names') ?? [];
+                $tax_percents     = $this->request->getPost('tax_percents') ?? [];
 
                 $tax_name_index = 0;
 
@@ -869,7 +876,17 @@ class Items extends Secure_Controller
             if ($field === 'supplier_id' && $value !== '') {
                 $item_data[$field] = $value;
             } elseif ($value !== null && $value !== '') {
-                $item_data[$field] = $value;
+                // Numeric fields are entered in the user's locale format
+                // (e.g. "1,234.56"); store the machine value, matching
+                // postSave(). Writing the raw string lets MySQL truncate it
+                // at the first separator and silently corrupt the price.
+                if ($field === 'cost_price' || $field === 'unit_price') {
+                    $item_data[$field] = parse_decimals($value);
+                } elseif ($field === 'reorder_level') {
+                    $item_data[$field] = parse_quantity($value);
+                } else {
+                    $item_data[$field] = $value;
+                }
             }
         }
 

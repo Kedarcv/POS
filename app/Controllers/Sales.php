@@ -7,6 +7,7 @@ use App\Libraries\Email_lib;
 use App\Libraries\Sale_lib;
 use App\Libraries\Tax_lib;
 use App\Libraries\Token_lib;
+use App\Libraries\Zimra_lib;
 use App\Models\Customer;
 use App\Models\Customer_rewards;
 use App\Models\Dinner_table;
@@ -42,6 +43,7 @@ class Sales extends Secure_Controller
     private Item_kit $item_kit;
     private Sale $sale;
     private Stock_location $stock_location;
+    private Zimra_lib $zimra_lib;
     private array $config;
 
     public function __construct()
@@ -54,6 +56,7 @@ class Sales extends Secure_Controller
         $this->sale_lib = new Sale_lib();
         $this->tax_lib = new Tax_lib();
         $this->token_lib = new Token_lib();
+        $this->zimra_lib = new Zimra_lib();
         $this->config = config(OSPOS::class)->settings;
 
         $this->customer = model(Customer::class);
@@ -843,6 +846,7 @@ class Sales extends Secure_Controller
                     return $this->reload($data);
                 } else {
                     $data['barcode'] = $this->barcode_lib->generate_receipt_barcode($data['sale_id']);
+                    $data['zimra'] = $this->fiscalize_sale($data['sale_id_num'], $data['total']);
                     $this->sale_lib->clear_all();
                     return view('sales/' . $invoice_view, $data);
                 }
@@ -927,6 +931,7 @@ class Sales extends Secure_Controller
                 return $this->reload($data);
             } else {
                 $data['barcode'] = $this->barcode_lib->generate_receipt_barcode($data['sale_id']);
+                $data['zimra'] = $this->fiscalize_sale($data['sale_id_num'], $data['total']);
 
                 // Validate receipt template to prevent path traversal
                 $receipt_template = $this->config['receipt_template'] ?? '';
@@ -938,6 +943,29 @@ class Sales extends Secure_Controller
                 $this->sale_lib->clear_all();
                 return view('sales/receipt', $data);
             }
+        }
+    }
+
+    /**
+     * Submits a completed sale to ZIMRA's FDMS for fiscalisation, if
+     * enabled. Never allowed to block or fail the sale itself — a network
+     * or FDMS outage must not stop the till from operating; the receipt
+     * is queued and retried later (see Zimra::postRetry).
+     *
+     * @return array|null Fiscalisation result for the receipt view (QR/verification code), or null if not enabled.
+     */
+    private function fiscalize_sale(int $sale_id, float $total): ?array
+    {
+        if (!$this->zimra_lib->isEnabled()) {
+            return null;
+        }
+
+        try {
+            $payload = $this->zimra_lib->buildSalePayloadFromPersistedSale($sale_id, $total);
+            return $this->zimra_lib->fiscalizeSale($payload);
+        } catch (\Throwable $e) {
+            log_message('error', '[ZIMRA] Fiscalisation error for sale ' . $sale_id . ': ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 
@@ -1329,6 +1357,31 @@ class Sales extends Secure_Controller
         $this->sale_lib->clear_all();
 
         return view('sales/receipt', $data);
+    }
+
+    /**
+     * GET /sales/reprint_last — jumps to the receipt for the most recent
+     * completed sale rung up by the current employee, for the "Print Last
+     * Receipt" button on the register (a jammed/skipped print, or the
+     * customer asking for another copy, shouldn't require digging through
+     * Sales > Manage to find the sale again).
+     */
+    public function getReprintLast(): ResponseInterface
+    {
+        $employeeId = $this->employee->get_logged_in_employee_info()->person_id;
+
+        $row = db_connect()->table('sales')
+            ->where('employee_id', $employeeId)
+            ->orderBy('sale_time', 'DESC')
+            ->limit(1)
+            ->get()
+            ->getRowArray();
+
+        if (! $row) {
+            return redirect()->to('/sales')->with('error', 'No recent sale to reprint.');
+        }
+
+        return redirect()->to('/sales/receipt/' . $row['sale_id']);
     }
 
     /**
@@ -1875,7 +1928,20 @@ class Sales extends Secure_Controller
         $ecocashLib = new \App\Libraries\Ecocash_lib();
         $result = $ecocashLib->lookupStatus($phone, $correlator);
 
-        if ($result['success'] && in_array(strtoupper($result['status']), ['COMPLETED', 'SUCCESS', 'SUCCESSFUL', 'PAID'])) {
+        // The live gateway returns descriptive multi-word statuses, not the
+        // bare keywords this used to require an exact match against — a
+        // customer-approved payment could come back e.g. "TRANSACTION
+        // COMPLETED SUCCESSFULLY" and never be recognized as done.
+        $statusUpper = strtoupper((string) $result['status']);
+        $isComplete = false;
+        foreach (['COMPLETED', 'SUCCESS', 'SUCCESSFUL', 'PAID'] as $doneStatus) {
+            if (str_contains($statusUpper, $doneStatus)) {
+                $isComplete = true;
+                break;
+            }
+        }
+
+        if ($result['success'] && $isComplete) {
             // Update external payment record
             try {
                 $extPayment = model(\App\Models\Externalpayment::class);
@@ -1890,6 +1956,12 @@ class Sales extends Secure_Controller
                 log_message('error', '[Sales EcoCash Update] ' . $e->getMessage());
             }
         }
+
+        // The register's polling loop needs to tell "still waiting on the
+        // customer" (success=true, e.g. "PENDING...") apart from "actually
+        // done" (success=true AND isComplete) without re-implementing the
+        // gateway's own status-string matching client-side.
+        $result['complete'] = $isComplete;
 
         return $this->response->setJSON($result);
     }

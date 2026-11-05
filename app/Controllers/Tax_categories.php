@@ -18,16 +18,20 @@ class Tax_categories extends Secure_Controller
         parent::__construct('tax_categories');
 
         $this->tax_category = model(Tax_category::class);
+        helper('tax_helper');
     }
 
     /**
      * @return string
      */
-    public function getIndex(): string
+    public function getIndex(): ResponseInterface
     {
-        $data['tax_categories_table_headers'] = get_tax_categories_table_headers();
-
-        return view('taxes/tax_categories', $data);
+        // taxes/tax_categories.php is a tab of the combined Taxes management
+        // page (taxes/manage.php) and only ever renders correctly with the
+        // full data set Taxes::getIndex() assembles for all four tabs at
+        // once — trying to render it standalone here was missing most of
+        // that data. Send users to the real page, tab pre-selected.
+        return redirect()->to(base_url('taxes') . '#tax_categories_tab');
     }
 
     /**
@@ -37,7 +41,8 @@ class Tax_categories extends Secure_Controller
      */
     public function getSearch(): ResponseInterface
     {
-        $search = $this->request->getGet('search');
+        // Absent search param -> null, but Tax_category::search() requires a string.
+        $search = $this->request->getGet('search') ?? '';
         $limit  = $this->request->getGet('limit', FILTER_SANITIZE_NUMBER_INT);
         $offset = $this->request->getGet('offset', FILTER_SANITIZE_NUMBER_INT);
         $sort   = $this->sanitizeSortColumn(get_tax_categories_table_headers(), $this->request->getGet('sort', FILTER_SANITIZE_FULL_SPECIAL_CHARS), 'tax_category_id');

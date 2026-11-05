@@ -8,8 +8,21 @@
 
 <script type="text/javascript">
     function printdoc() {
-        // Install Firefox addon in order to use this plugin
-        if (window.jsPrintSetup) {
+        // The Electron app's native bridge (see electron/preload.cjs) — sends
+        // straight to the configured physical printer for this role
+        // (receipt/invoice/takings can each be their own printer), no OS
+        // print dialog involved. This is the real path in the shipped app;
+        // jsPrintSetup below is a legacy Firefox-extension fallback that
+        // never applies here, and plain window.print() is the last resort
+        // for a browser tab with neither (e.g. this page opened outside the
+        // app shell).
+        if (window.beamlinkPrint) {
+            window.beamlinkPrint.printSilently('<?= esc($selected_printer, 'js') ?>').then(function(result) {
+                if (!result.success && result.error) {
+                    console.error('Print failed:', result.error);
+                }
+            });
+        } else if (window.jsPrintSetup) {
             // Set top margins in millimeters
             jsPrintSetup.setOption('marginTop', '<?= $config['print_top_margin'] ?>');
             jsPrintSetup.setOption('marginLeft', '<?= $config['print_left_margin'] ?>');

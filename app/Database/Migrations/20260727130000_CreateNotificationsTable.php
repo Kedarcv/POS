@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Database\Migration;
+namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
@@ -23,7 +23,9 @@ class CreateNotificationsTable extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addKey('person_id');
         $this->forge->addKey(['person_id', 'is_read']);
-        $this->forge->createTable('notifications');
+        // Idempotent: installs created before the namespace fix recorded this
+        // migration under App\Database\Migration and will re-run it once.
+        $this->forge->createTable('notifications', true);
     }
 
     public function down()

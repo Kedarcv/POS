@@ -443,16 +443,38 @@ class Employee extends Person
      */
     public function has_module_grant(string $permission_id, int $person_id): bool
     {
-        $builder = $this->db->table('grants');
-        $builder->like('permission_id', $permission_id, 'after');
-        $builder->where('person_id', $person_id);
-        $result_count = $builder->get()->getNumRows();
-
-        if ($result_count !== 1) {
-            return $result_count !== 0;
+        // Was a "permission_id LIKE '<module>%'" prefix match to find both
+        // the bare module grant and any of its held sub-permissions in one
+        // query — silently wrong for module/sub-permission pairs that don't
+        // literally share a string prefix (e.g. module "taxes" vs its own
+        // sub-permissions "tax_categories"/"tax_codes"/"tax_jurisdictions",
+        // which start with "tax_", not "taxes"). That mismatch made the
+        // count always land on exactly the bare module row, so
+        // has_subpermissions() then correctly found taxes' 3 real
+        // sub-permissions unmet and denied access outright — even to an
+        // employee holding all three. Joins on the real module_id
+        // relationship instead, so it's correct regardless of naming.
+        if (! $this->has_grant($permission_id, $person_id)) {
+            return false;
         }
 
-        return $this->has_subpermissions($permission_id);
+        $subPermissionIds = array_column(
+            $this->db->table('permissions')
+                ->select('permission_id')
+                ->where('module_id', $permission_id)
+                ->where('module_id !=', 'permission_id', false)
+                ->get()->getResultArray(),
+            'permission_id',
+        );
+
+        if (empty($subPermissionIds)) {
+            return true; // no sub-permissions registered for this module
+        }
+
+        return $this->db->table('grants')
+            ->where('person_id', $person_id)
+            ->whereIn('permission_id', $subPermissionIds)
+            ->countAllResults() > 0;
     }
 
     /**
@@ -460,10 +482,19 @@ class Employee extends Person
      */
     public function has_subpermissions(string $permission_id): bool
     {
+        // Was a naive "permission_id LIKE '<module>_%'" string match with no
+        // module_id check — a false positive whenever an unrelated top-level
+        // module's name happens to share that prefix (e.g. "expenses" vs the
+        // independent "expenses_categories" module) makes this wrongly think
+        // "expenses" has sub-permissions, which then silently blocks anyone
+        // holding only "expenses" from the module entirely. Sub-permissions
+        // are rows whose module_id is this module but whose own permission_id
+        // differs from it — matching Module::get_all_subpermissions().
         $builder = $this->db->table('permissions');
-        $builder->like('permission_id', $permission_id . '_', 'after');
+        $builder->where('module_id', $permission_id);
+        $builder->where('module_id !=', 'permission_id', false);
 
-        return $builder->get()->getNumRows() === 0;    // TODO: ===
+        return $builder->get()->getNumRows() === 0;
     }
 
     /**

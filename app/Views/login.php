@@ -42,7 +42,7 @@ $request = Services::request();
         <div class="container-login container-fluid d-flex flex-column flex-md-row bg-body shadow rounded m-3 p-4 p-md-0">
             <div class="box-logo d-flex flex-column justify-content-center align-items-center border-end border-secondary-subtle px-4 pb-3 p-md-4">
                 <?php if (isset($config['company_logo']) && !empty($config['company_logo'])): ?>
-                    <img class="logo w-100" src="<?= base_url('uploads/' . esc($config['company_logo'], 'url')) ?>" alt="<?= esc(lang('Common.logo') . '&nbsp;' . $config['company']) ?>">
+                    <img class="logo w-100" src="<?= base_url('uploads/' . esc($config['company_logo'], 'url')) ?>" alt="<?= esc(lang('Common.logo')) ?> <?= esc($config['company']) ?>">
                 <?php else: ?>
                     <img class="logo" src="<?= base_url('images/logo.png') ?>" alt="<?= esc($config['company'] . ' Logo') ?>" style="max-width: 200px;">
                 <?php endif; ?>

@@ -190,6 +190,8 @@
         <?= $sale_id ?>
     </div>
 
+    <?= view('partial/zimra_receipt_block', ['zimra' => $zimra ?? null]) ?>
+
     <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
 
     <div style="text-align: center; font-size: 80%; color: #555;">

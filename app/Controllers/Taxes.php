@@ -78,7 +78,8 @@ class Taxes extends Secure_Controller
      */
     public function getSearch(): ResponseInterface
     {
-        $search = $this->request->getGet('search');
+        // Absent search param -> null, but Tax::search() requires a string.
+        $search = $this->request->getGet('search') ?? '';
         $limit = $this->request->getGet('limit', FILTER_SANITIZE_NUMBER_INT);
         $offset = $this->request->getGet('offset', FILTER_SANITIZE_NUMBER_INT);
         $sort = $this->sanitizeSortColumn(get_tax_rates_manage_table_headers(), $this->request->getGet('sort', FILTER_SANITIZE_FULL_SPECIAL_CHARS), 'tax_rate_id');

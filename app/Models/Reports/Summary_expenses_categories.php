@@ -40,6 +40,11 @@ class Summary_expenses_categories extends Summary_report
 
         $builder->where('expenses.deleted', 0);
 
+        // Exclude internal-transfer categories (e.g. print-shop stock consumption)
+        // from P&L-style expense reporting - that cost was already captured when
+        // the stock was purchased.
+        $builder->where('(expense_categories.is_internal IS NULL OR expense_categories.is_internal = 0)');
+
         $builder->groupBy('expense_categories.category_name');
         $builder->orderBy('expense_categories.category_name');
 
@@ -56,6 +61,7 @@ class Summary_expenses_categories extends Summary_report
 
         $builder = $this->db->table('expenses AS expenses');
         $builder->select('SUM(expenses.amount) AS expenses_total_amount, SUM(expenses.tax_amount) AS expenses_total_tax_amount');
+        $builder->join('expense_categories AS expense_categories', 'expense_categories.expense_category_id = expenses.expense_category_id', 'LEFT');
 
         if (empty($config['date_or_time_format'])) {    // TODO: Duplicated code
             $builder->where('DATE(expenses.date) BETWEEN ' . $this->db->escape($inputs['start_date']) . ' AND ' . $this->db->escape($inputs['end_date']));
@@ -64,6 +70,7 @@ class Summary_expenses_categories extends Summary_report
         }
 
         $builder->where('expenses.deleted', 0);
+        $builder->where('(expense_categories.is_internal IS NULL OR expense_categories.is_internal = 0)');
 
         return $builder->get()->getRowArray();
     }

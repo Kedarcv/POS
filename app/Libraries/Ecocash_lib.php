@@ -62,13 +62,22 @@ class Ecocash_lib
         $msisdn = $this->formatMsisdn($phone);
         $clientCorrelator = 'POS-' . time() . '-' . rand(100, 999);
         $referenceCode = $referenceCode ?: $clientCorrelator;
-        $remarks = $remarks ?: 'Payment for POS Sale #' . $referenceCode;
+        // This is what shows up on the customer's phone prompt — the real
+        // sale flow (Sales::postInitiateEcocash) never passes a custom
+        // remarks, so without a branded default the prompt just said
+        // "Payment for POS Sale #..." with no mention of BeamLink at all.
+        $remarks = $remarks ?: 'BeamLink POS - Sale #' . $referenceCode;
 
         $payload = [
             'clientCorrelator' => $clientCorrelator,
             'notifyUrl'        => base_url('webhook/ecocash'),
             'referenceCode'    => $referenceCode,
-            'tranRemarks'      => $remarks,
+            // The gateway's own response schema echoes back a top-level
+            // "remarks" field (always null in testing) — "tranRemarks" isn't
+            // a field it recognizes at all, so our text never reached it,
+            // and its prompt fell back to literally displaying the word
+            // "Remarks" as a placeholder on the customer's phone.
+            'remarks'          => $remarks,
             'paymentAmount'    => [
                 'charginginformation' => [
                     'amount'      => number_format($amount, 2, '.', ''),
@@ -78,7 +87,9 @@ class Ecocash_lib
                 'chargeMetaData' => [
                     'channel'              => 'WEB',
                     'purchaseCategoryCode' => 'Goods',
-                    'onBehalfOf'           => 'BEAMEDIT',
+                    // Response echoes this back as "onBeHalfOf" (capital H);
+                    // we were sending "onBehalfOf", so it was never applied.
+                    'onBeHalfOf'           => 'BEAMEDIT',
                 ],
             ],
             'merchantCode'   => $this->merchantCode,
@@ -185,7 +196,20 @@ class Ecocash_lib
         log_message('info', '[EcoCash API Response] HTTP Code: ' . $httpCode . ' Body: ' . $result);
 
         $status = $decoded['transactionOperationStatus'] ?? ($httpCode >= 200 && $httpCode < 300 ? 'SUCCESS' : 'FAILED');
-        $success = in_array(strtoupper($status), ['SUCCESS', 'COMPLETED', 'PENDING', 'PAID', 'SUCCESSFUL']);
+
+        // The live gateway returns descriptive multi-word statuses (e.g.
+        // "PENDING SUBSCRIBER VALIDATION" while it waits for the customer to
+        // approve the prompt on their phone), not the bare keywords this
+        // used to match exactly — every real charge was misreported as
+        // failed even when the prompt was sent successfully.
+        $statusUpper = strtoupper($status);
+        $success = false;
+        foreach (['SUCCESS', 'COMPLETED', 'PENDING', 'PAID', 'SUCCESSFUL'] as $okStatus) {
+            if (str_contains($statusUpper, $okStatus)) {
+                $success = true;
+                break;
+            }
+        }
 
         return [
             'success'      => $success,

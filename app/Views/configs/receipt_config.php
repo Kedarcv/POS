@@ -337,7 +337,28 @@
 <script type="text/javascript">
     // Validation and submit handling
     $(document).ready(function() {
-        if (window.localStorage && window.jsPrintSetup) {
+        if (window.beamlinkPrint) {
+            // The app's native Electron printer bridge — the real path in
+            // the shipped app. Selections are persisted by the main process
+            // (settings.json), not localStorage, so they're consistent
+            // across every window (a "Print Last Receipt" tab included)
+            // rather than per-renderer-origin.
+            window.beamlinkPrint.listPrinters().then(function(printers) {
+                var roles = ['receipt_printer', 'invoice_printer', 'takings_printer'];
+                roles.forEach(function(role) {
+                    var $select = $('#' + role);
+                    printers.forEach(function(printer) {
+                        $select.append($('<option>', { value: printer.name }).text(printer.displayName || printer.name));
+                    });
+                    window.beamlinkPrint.getSelectedPrinter(role).then(function(selected) {
+                        $select.val(selected);
+                    });
+                    $select.on('change', function() {
+                        window.beamlinkPrint.setSelectedPrinter(role, $(this).val());
+                    });
+                });
+            });
+        } else if (window.localStorage && window.jsPrintSetup) {
             var printers = (jsPrintSetup.getPrintersList() && jsPrintSetup.getPrintersList().split(',')) || [];
             $('#receipt_printer, #invoice_printer, #takings_printer').each(function() {
                 var $this = $(this)
@@ -360,7 +381,7 @@
             });
         }
 
-        var dialog_confirmed = window.jsPrintSetup;
+        var dialog_confirmed = window.beamlinkPrint || window.jsPrintSetup;
 
         $('#receipt_config_form').validate($.extend(form_support.handler, {
             submitHandler: function(form) {
