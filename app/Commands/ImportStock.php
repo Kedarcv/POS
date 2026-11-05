@@ -65,6 +65,7 @@ class ImportStock extends BaseCommand
 
         $currentCategory = 'Uncategorized';
         $imported        = 0;
+        $updated         = 0;
         $skipped         = 0;
         $categories      = [];
         $itemsData       = [];
@@ -154,6 +155,29 @@ class ImportStock extends BaseCommand
         $now            = date('Y-m-d H:i:s');
 
         foreach ($itemsData as $item) {
+            $existing = $itemsTable->where('item_number', $item['sku'])->where('deleted', 0)->get()->getRowArray();
+            if ($existing !== null) {
+                $itemsTable->where('item_id', $existing['item_id'])->update([
+                    'name'       => $item['name'],
+                    'category'   => $item['category'],
+                    'cost_price' => $item['cost_price'],
+                    'unit_price' => $item['selling_price'],
+                ]);
+                $qtyTable->where(['item_id' => $existing['item_id'], 'location_id' => 1])->update([
+                    'quantity' => $item['quantity'],
+                ]);
+                $inventoryTable->insert([
+                    'trans_items'     => $existing['item_id'],
+                    'trans_user'      => 1,
+                    'trans_date'      => $now,
+                    'trans_comment'   => 'Stock import update',
+                    'trans_location'  => 1,
+                    'trans_inventory' => $item['quantity'],
+                ]);
+                $updated++;
+                continue;
+            }
+
             $batch[] = [
                 'item_id'               => $nextId,
                 'name'                  => $item['name'],
@@ -220,6 +244,7 @@ class ImportStock extends BaseCommand
 
         CLI::write("\n=== IMPORT COMPLETE ===", 'green');
         CLI::write("Items imported: {$imported}", 'green');
+        CLI::write("Items updated:  {$updated}", 'green');
         CLI::write("Items skipped:  {$skipped}", 'yellow');
         CLI::write('Categories:     ' . count($categories), 'green');
     }

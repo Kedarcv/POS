@@ -13,6 +13,9 @@ $routes->post('login', 'Login::index');
 $routes->post('migrate', 'Login::migrate');
 
 $routes->get('dashboard', 'Dashboard::index');
+$routes->get('admin_data', 'Admin_data::getIndex');
+$routes->post('admin_data/import', 'Admin_data::postImport');
+$routes->post('admin_data/clear_operational', 'Admin_data::postClearOperational');
 
 // Secure_Controller redirects denied users to no_access/<module_id>/<submodule_id>
 // (no literal "index" segment, and the method is getIndex — these must match exactly).

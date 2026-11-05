@@ -46,4 +46,6 @@ return [
     "timeclocks_categories"      => "",
     "timeclocks_categories_desc" => "",
     "timeclocks_desc"            => "",
+    "admin_data"                 => "Administrator Data Tools",
+    "admin_data_desc"            => "Import stock and clear operational data.",
 ];

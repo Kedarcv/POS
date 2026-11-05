@@ -55,5 +55,7 @@ return [
     'timeclocks_categories_desc' => '',
     'zimra'                      => 'ZIMRA Fiscalisation',
     'zimra_desc'                 => 'Register the till with ZIMRA, manage fiscal days, and monitor receipt submission.',
+    'admin_data'                 => 'Administrator Data Tools',
+    'admin_data_desc'            => 'Import stock and clear operational data.',
     'timeclocks_desc'            => '',
 ];
