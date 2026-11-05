@@ -211,11 +211,11 @@ ipcMain.handle('set-selected-printer', (event, printerRole, deviceName) => {
 // USB/cable printer.
 ipcMain.handle('open-bluetooth-settings', () => {
     if (process.platform === 'win32') {
-        shell.openExternal('ms-settings:bluetooth');
+        shell.openExternal('ms-settings:bluetooth').catch(() => {});
         return true;
     }
     if (process.platform === 'darwin') {
-        shell.openExternal('x-apple.systempreferences:com.apple.BluetoothSettings');
+        shell.openExternal('x-apple.systempreferences:com.apple.BluetoothSettings').catch(() => {});
         return true;
     }
 

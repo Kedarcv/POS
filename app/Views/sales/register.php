@@ -490,10 +490,10 @@ helper('url');
                             <tr>
                                 <td colspan="2">
                                     <div class="btn-group btn-group-justified" role="group" id="quick_payment_buttons">
-                                        <button type="button" class="btn btn-default btn-sm quick-payment-btn" data-payment-type="<?= esc(lang(ucfirst($controller_name) . '.cash'), 'attr') ?>">
+                                        <button type="button" class="btn btn-success btn-sm quick-payment-btn" data-payment-type="<?= esc(lang(ucfirst($controller_name) . '.cash'), 'attr') ?>">
                                             <span class="glyphicon glyphicon-usd"></span> <?= lang(ucfirst($controller_name) . '.cash') ?>
                                         </button>
-                                        <button type="button" class="btn btn-default btn-sm quick-payment-btn" data-payment-type="<?= esc(lang('Sales.ecocash'), 'attr') ?>">
+                                        <button type="button" class="btn btn-info btn-sm quick-payment-btn" data-payment-type="<?= esc(lang('Sales.ecocash'), 'attr') ?>" data-quick-action="ecocash">
                                             <span class="glyphicon glyphicon-phone"></span> <?= lang('Sales.ecocash') ?>
                                         </button>
                                     </div>
@@ -881,7 +881,13 @@ helper('url');
                 $("#layby_deposit").val("<?= to_currency_no_money($amount_due) ?>");
                 $("#layby_modal").modal('show');
             } else {
-                $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+                // Cash (and the other direct methods) complete and print in
+                // one click when the amount received covers the balance.
+                var due = cashMode ? cashAmountDue : amountDue;
+                var received = parseFloat($('#amount_tendered:enabled').val()) || 0;
+                $('#add_payment_form')
+                    .find('input[name="complete_after_payment"]')
+                    .val(received >= due ? '1' : '0');
                 $('#add_payment_form').submit();
             }
         });
@@ -896,7 +902,13 @@ helper('url');
                 $select.selectpicker('refresh');
             }
             $select.trigger('change');
-            $('#amount_tendered:enabled').focus().select();
+
+            if ($(this).data('quick-action') === 'ecocash') {
+                // EcoCash needs the phone number, so open its prompt modal.
+                $('#add_payment_button').click();
+            } else {
+                $('#amount_tendered:enabled').focus().select();
+            }
         });
 
         // Live change calculation while the cashier types the cash received.
@@ -1262,7 +1274,7 @@ $('#pesepay_confirm').click(function() {
     var phone = $('#pesepay_phone').val();
     $('#reference_code').val('PES' + (phone || 'MANUAL'));
     $('#pesepay_modal').modal('hide');
-    $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+    $('#add_payment_form').find('input[name="complete_after_payment"]').val('1');
     $('#add_payment_form').submit();
 });
 
@@ -1294,7 +1306,8 @@ function ecocashComplete(refCode) {
     stopEcocashPolling();
     $('#reference_code').val(refCode);
     $('#ecocash_modal').modal('hide');
-    $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+    // Payment is confirmed, so finish the sale and print the receipt.
+    $('#add_payment_form').find('input[name="complete_after_payment"]').val('1');
     $('#add_payment_form').submit();
 }
 
@@ -1394,7 +1407,7 @@ $('#card_confirm').click(function() {
     var last4 = num.slice(-4);
     $('#reference_code').val('CARD' + last4);
     $('#card_modal').modal('hide');
-    $('#add_payment_form').find('input[name="complete_after_payment"]').val('0');
+    $('#add_payment_form').find('input[name="complete_after_payment"]').val('1');
     $('#add_payment_form').submit();
 });
 

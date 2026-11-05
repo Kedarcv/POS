@@ -496,6 +496,17 @@ class Sales extends Secure_Controller
             }
         }
 
+        // "Payment made" (cash received / confirmed mobile payment) submits
+        // the payment and completes the sale in one step, so the receipt
+        // prints immediately. Only complete when the payment actually covers
+        // what is still due — a split/partial payment still returns to the
+        // register.
+        if (empty($data['error'])
+            && $this->request->getPost('complete_after_payment') == 1
+            && bccomp($this->sale_lib->get_amount_due(), '0', totals_decimals()) <= 0) {
+            return $this->postComplete();
+        }
+
         return $this->reload($data);
     }
 
