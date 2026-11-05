@@ -15,8 +15,8 @@ services:
         image: mariadb:10.5
         container_name: mysql
         restart: always
-        expose:
-          - "3306"
+        ports:
+          - "3307:3306"
         networks:
           - app_net
         volumes:
