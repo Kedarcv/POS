@@ -10,6 +10,8 @@ use App\Models\Reports\Detailed_receivings;
 use App\Models\Reports\Detailed_sales;
 use App\Models\Reports\Inventory_low;
 use App\Models\Reports\Inventory_summary;
+use App\Models\Reports\Stock_take;
+use App\Models\Item;
 use App\Models\Reports\Specific_customer;
 use App\Models\Reports\Specific_discount;
 use App\Models\Reports\Specific_employee;
@@ -50,6 +52,7 @@ class Reports extends Secure_Controller
     private Supplier $supplier;
     private Detailed_receivings $detailed_receivings;
     private Inventory_summary $inventory_summary;
+    private Stock_take $stock_take;
 
     public function __construct()
     {
@@ -77,11 +80,16 @@ class Reports extends Secure_Controller
         $this->supplier = model(Supplier::class);
         $this->detailed_receivings = model(Detailed_receivings::class);
         $this->inventory_summary = model(Inventory_summary::class);
+        $this->stock_take = model(Stock_take::class);
 
         if (sizeof($exploder) > 1) {
-            preg_match('/(?:inventory)|([^_.]*)(?:_graph|_row)?$/', $method_name, $matches);
-            preg_match('/^(.*?)([sy])?$/', array_pop($matches), $matches);
-            $submodule_id = $matches[1] . ((count($matches) > 2) ? $matches[2] : 's');
+            if (str_starts_with($method_name, 'stock_take')) {
+                $submodule_id = 'inventory';
+            } else {
+                preg_match('/(?:inventory)|([^_.]*)(?:_graph|_row)?$/', $method_name, $matches);
+                preg_match('/^(.*?)([sy])?$/', array_pop($matches), $matches);
+                $submodule_id = $matches[1] . ((count($matches) > 2) ? $matches[2] : 's');
+            }
 
             // Check access to report submodule
             if (!$this->employee->has_grant('reports_' . $submodule_id, $this->employee->get_logged_in_employee_info()->person_id)) {
@@ -2136,5 +2144,156 @@ class Reports extends Secure_Controller
             ->appendHeader('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT')
             ->appendHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
             ->appendHeader('Cache-Control', 'post-check=0, pre-check=0');
+    }
+
+    /**
+     * Stock take filter & field selection form.
+     */
+    public function stock_take_input(): string
+    {
+        $this->clearCache();
+
+        $data = [];
+        $data['item_count'] = $this->stock_take->getItemCountDropdownArray();
+        $data['sort_options'] = $this->stock_take->getSortByDropdownArray();
+
+        $stockLocations = $this->stock_location->get_allowed_locations();
+        $stockLocations['all'] = lang('Reports.all');
+        $data['stock_locations'] = array_reverse($stockLocations, true);
+
+        $categories = ['all' => lang('Reports.all')];
+        $itemModel = model(Item::class);
+        $catResult = $itemModel->get_categories();
+        if ($catResult) {
+            foreach ($catResult->getResultArray() as $row) {
+                if (!empty($row['category'])) {
+                    $categories[$row['category']] = $row['category'];
+                }
+            }
+        }
+        $data['categories'] = $categories;
+        $data['available_fields'] = $this->stock_take->getAllAvailableFields();
+        $data['default_fields'] = $this->stock_take->getDefaultFields();
+
+        return view('reports/stock_take_input', $data);
+    }
+
+    /**
+     * Generates the printable stock take sheet.
+     */
+    public function stock_take(): string
+    {
+        $this->clearCache();
+
+        $locationId = $this->request->getGetPost('location_id') ?? 'all';
+        $itemCount = $this->request->getGetPost('item_count') ?? 'all';
+        $category = $this->request->getGetPost('category') ?? 'all';
+        $sortBy = $this->request->getGetPost('sort_by') ?? 'name';
+        $hideQuantities = (bool) $this->request->getGetPost('hide_quantities');
+
+        $selectedFields = $this->request->getGetPost('fields');
+        if (empty($selectedFields) || !is_array($selectedFields)) {
+            $selectedFields = $this->stock_take->getDefaultFields();
+        }
+
+        $inputs = [
+            'location_id' => $locationId,
+            'item_count'  => $itemCount,
+            'category'    => $category,
+            'sort_by'     => $sortBy,
+        ];
+
+        $reportData = $this->stock_take->getData($inputs);
+
+        $locationName = $locationId === 'all'
+            ? lang('Reports.all')
+            : ($this->stock_location->get_location_name($locationId) ?: lang('Reports.all'));
+
+        $data = [
+            'title'            => lang('Reports.stock_take_sheet'),
+            'subtitle'         => $locationName,
+            'inputs'           => $inputs,
+            'selected_fields'  => $selectedFields,
+            'available_fields' => $this->stock_take->getAllAvailableFields(),
+            'columns'          => $this->stock_take->getDataColumnsForFields($selectedFields),
+            'data'             => $reportData,
+            'hide_quantities'  => $hideQuantities,
+            'location_name'    => $locationName,
+        ];
+
+        return view('reports/stock_take', $data);
+    }
+
+    /**
+     * Exports the stock take sheet as a Windows Excel-compatible CSV.
+     */
+    public function stock_take_export(): ResponseInterface
+    {
+        $locationId = $this->request->getGetPost('location_id') ?? 'all';
+        $itemCount = $this->request->getGetPost('item_count') ?? 'all';
+        $category = $this->request->getGetPost('category') ?? 'all';
+        $sortBy = $this->request->getGetPost('sort_by') ?? 'name';
+        $hideQuantities = (bool) $this->request->getGetPost('hide_quantities');
+
+        $selectedFields = $this->request->getGetPost('fields');
+        if (empty($selectedFields) || !is_array($selectedFields)) {
+            $selectedFields = $this->stock_take->getDefaultFields();
+        }
+
+        $inputs = [
+            'location_id' => $locationId,
+            'item_count'  => $itemCount,
+            'category'    => $category,
+            'sort_by'     => $sortBy,
+        ];
+
+        $reportData = $this->stock_take->getData($inputs);
+        $allFields = $this->stock_take->getAllAvailableFields();
+
+        $fp = fopen('php://memory', 'w+');
+        // UTF-8 BOM for Windows Excel compatibility
+        fputs($fp, "\xEF\xBB\xBF");
+
+        $headers = [];
+        foreach ($selectedFields as $field) {
+            $headers[] = $allFields[$field]['label'] ?? $field;
+        }
+        fputcsv($fp, $headers);
+
+        foreach ($reportData as $row) {
+            $line = [];
+            foreach ($selectedFields as $field) {
+                $val = match ($field) {
+                    'item_name'      => $row['name'] ?? '',
+                    'item_number'    => $row['item_number'] ?? '',
+                    'category'       => $row['category'] ?? '',
+                    'location_name'  => $row['location_name'] ?? '',
+                    'quantity'       => $hideQuantities ? '' : (string) to_quantity_decimals($row['quantity'] ?? 0),
+                    'physical_count' => '',
+                    'variance'       => '',
+                    'cost_price'     => (string) to_currency_no_money($row['cost_price'] ?? 0),
+                    'unit_price'     => (string) to_currency_no_money($row['unit_price'] ?? 0),
+                    'reorder_level'  => (string) to_quantity_decimals($row['reorder_level'] ?? 0),
+                    'qty_per_pack'   => (string) to_quantity_decimals($row['qty_per_pack'] ?? 1),
+                    'description'    => $row['description'] ?? '',
+                    default          => '',
+                };
+                $line[] = $val;
+            }
+            fputcsv($fp, $line);
+        }
+
+        rewind($fp);
+        $csvContent = stream_get_contents($fp);
+        fclose($fp);
+
+        $fileName = 'stock_take_' . date('Y-m-d_His') . '.csv';
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/csv; charset=utf-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"')
+            ->setHeader('Cache-Control', 'must-revalidate, post-check=0, pre-check=0')
+            ->setHeader('Pragma', 'public')
+            ->setBody($csvContent);
     }
 }

@@ -356,26 +356,26 @@
                     }).text(label));
                 });
 
-                var currentPrinter = printers.find(function(printer) { return printer.name === current; });
-                var connected = printers.filter(function(printer) {
-                    return printer.available !== false && !printer.virtual;
+                var currentPrinter = current ? printers.find(function(printer) { return printer.name === current; }) : null;
+                var nonVirtual = printers.filter(function(printer) {
+                    return !printer.virtual;
                 });
-                var best = connected.find(isReceiptPrinter) || connected[0];
+                var best = nonVirtual.find(isReceiptPrinter) || nonVirtual[0] || printers[0];
                 var selection = current;
 
                 if (!currentPrinter) {
-                    selection = best ? best.name : printers[0].name;
-                } else if ((currentPrinter.available === false || currentPrinter.virtual) && best) {
-                    selection = best.name;
+                    selection = best ? best.name : (printers[0] ? printers[0].name : '');
                 }
 
-                $select.val(selection);
-                window.beamlinkPrint.setSelectedPrinter('receipt_printer', selection);
+                if (selection) {
+                    $select.val(selection);
+                    window.beamlinkPrint.setSelectedPrinter('receipt_printer', selection);
+                }
 
-                if (best) {
-                    setPrinterStatus(printers.length + ' printer(s) detected. Using ' + printerName(best) + '.');
+                if (selection) {
+                    setPrinterStatus(printers.length + ' printer(s) detected. Selected: ' + selection + '.');
                 } else {
-                    setPrinterStatus('No connected printer found. Check the cable / pairing and try again.', true);
+                    setPrinterStatus('No printer found. Check the cable / pairing and try again.', true);
                 }
             }).catch(function() {
                 setPrinterStatus('Could not list printers.', true);

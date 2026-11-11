@@ -21,6 +21,15 @@ use Config\OSPOS;
 <script type="text/javascript" src="js/clipboard.min.js"></script>
 
 <div id="config_wrapper" class="col-sm-12">
+    <div style="margin-bottom: 15px; padding: 12px 16px; background: #f8f9fa; border: 1px solid #dcdcdc; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <strong style="font-size: 14px;"><span class="glyphicon glyphicon-hdd"></span> <?= lang('Config.backup_database') ?></strong>
+            <p class="text-muted" style="margin: 2px 0 0 0;">Download a complete, self-contained SQL backup of all database tables and records.</p>
+        </div>
+        <a href="<?= site_url('config/backup_db') ?>" class="btn btn-primary btn-sm">
+            <span class="glyphicon glyphicon-download-alt"></span> <?= lang('Config.backup_button') ?> (SQL)
+        </a>
+    </div>
     <?= lang('Config.server_notice') ?>
     <div class="container">
         <div class="row">

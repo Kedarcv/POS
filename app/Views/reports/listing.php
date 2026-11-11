@@ -96,6 +96,7 @@ if (isset($error)) {
                     ?>
                     <a class="list-group-item" href="<?= $inventory_low_report['path'] ?>"><?= esc($inventory_low_report['label']) ?></a>
                     <a class="list-group-item" href="<?= $inventory_summary_report['path'] ?>"><?= esc($inventory_summary_report['label']) ?></a>
+                    <a class="list-group-item" href="<?= site_url('reports/stock_take') ?>"><?= lang('Reports.stock_take') ?> - <?= lang('Reports.stock_take_sheet') ?></a>
                 </div>
             </div>
         <?php } ?>

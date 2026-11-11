@@ -7,17 +7,16 @@
 ?>
 
 <script type="text/javascript">
-    function printdoc() {
+    function printdoc(preferredPrinter) {
+        var role = '<?= esc($selected_printer, 'js') ?>';
+        var configuredDevice = preferredPrinter || '<?= esc($config[$selected_printer] ?? $config['printer_device_name'] ?? '', 'js') ?>';
+
         // The Electron app's native bridge (see electron/preload.cjs) — sends
         // straight to the configured physical printer for this role
         // (receipt/invoice/takings can each be their own printer), no OS
-        // print dialog involved. This is the real path in the shipped app;
-        // jsPrintSetup below is a legacy Firefox-extension fallback that
-        // never applies here, and plain window.print() is the last resort
-        // for a browser tab with neither (e.g. this page opened outside the
-        // app shell).
+        // print dialog involved.
         if (window.beamlinkPrint) {
-            return window.beamlinkPrint.printSilently('<?= esc($selected_printer, 'js') ?>').then(function(result) {
+            return window.beamlinkPrint.printSilently(role, configuredDevice).then(function(result) {
                 if (!result.success && result.error) {
                     console.error('Print failed:', result.error);
                 }

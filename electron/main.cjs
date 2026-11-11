@@ -186,15 +186,22 @@ function isReceiptPrinter(printer) {
 
 function windowsPrinterIsReady(state) {
     if (!state) return true;
-    if (state.WorkOffline) return false;
+    if (state.WorkOffline === true || state.WorkOffline === 1 || String(state.WorkOffline).toLowerCase() === 'true') {
+        return false;
+    }
 
     const status = Number(state.PrinterStatus);
     const error = Number(state.DetectedErrorState);
 
+    // Only block if explicitly offline or stopped printing
+    if (status === 7 || error === 9) return false;
+    if (status === 6) return false;
     if (BLOCKING_PRINTER_ERRORS.has(error)) return false;
-    if (status === 6 || status === 7) return false;
 
-    return status === 3 || status === 4 || status === 5 || error === 2;
+    // Notice: Do NOT mark unavailable for status 1 ("Other"), 2 ("Unknown"), or error 0/1.
+    // Thermal receipt printers on Windows (POS-58, POS-80, Xprinter, etc.) typically report
+    // status 1 or 2 because their generic USB drivers lack full bidirectional status polling.
+    return true;
 }
 
 function queryWindowsPrinterStates() {
@@ -232,9 +239,10 @@ function queryWindowsPrinterStates() {
     });
 }
 
-async function resolvePrinter(event, printerRole) {
+async function resolvePrinter(event, printerRole, preferredName = '') {
     const role = VALID_PRINTER_ROLES.has(printerRole) ? printerRole : 'receipt_printer';
-    const configured = (readSettings().printers || {})[role] || '';
+    const settings = readSettings();
+    const configured = preferredName || (settings.printers || {})[role] || '';
 
     let printers = [];
     try {
@@ -250,6 +258,10 @@ async function resolvePrinter(event, printerRole) {
             if (state && state.Default) defaultName = name;
         }
     }
+    if (!defaultName) {
+        const sysDef = printers.find((p) => p.isDefault);
+        if (sysDef) defaultName = sysDef.name.toLowerCase();
+    }
 
     const candidates = printers.map((printer) => ({
         name: printer.name,
@@ -260,19 +272,34 @@ async function resolvePrinter(event, printerRole) {
         configured: configured !== '' && String(printer.name).toLowerCase() === configured.toLowerCase(),
     }));
 
+    // If a configured printer matches an installed device, ALWAYS use it!
     const configuredCandidate = candidates.find((printer) => printer.configured);
-    if (configuredCandidate && configuredCandidate.available) {
-        return { ...configuredCandidate, source: 'configured', configured };
+    if (configuredCandidate) {
+        if (!settings.printers || settings.printers[role] !== configuredCandidate.name) {
+            settings.printers = settings.printers || {};
+            settings.printers[role] = configuredCandidate.name;
+            writeSettings(settings);
+        }
+        return {
+            ...configuredCandidate,
+            available: true,
+            source: 'configured',
+            configured: configuredCandidate.name,
+        };
     }
 
-    const connected = candidates.filter((printer) => printer.available && !printer.virtual);
-    const detected = connected.find((printer) => isReceiptPrinter(printer))
-        || connected.find((printer) => printer.isDefault)
-        || connected[0];
+    // Otherwise, find a connected non-virtual receipt printer or default
+    const nonVirtual = candidates.filter((printer) => !printer.virtual);
+    const detected = nonVirtual.find((printer) => printer.available && isReceiptPrinter(printer))
+        || nonVirtual.find((printer) => isReceiptPrinter(printer))
+        || nonVirtual.find((printer) => printer.available && printer.isDefault)
+        || nonVirtual.find((printer) => printer.isDefault)
+        || nonVirtual.find((printer) => printer.available)
+        || nonVirtual[0]
+        || candidates[0];
 
     if (detected) {
         if (!configured) {
-            const settings = readSettings();
             settings.printers = settings.printers || {};
             settings.printers[role] = detected.name;
             writeSettings(settings);
@@ -280,35 +307,36 @@ async function resolvePrinter(event, printerRole) {
 
         return {
             ...detected,
+            available: true,
             source: 'detected',
             configured,
-            configuredAvailable: Boolean(configuredCandidate && configuredCandidate.available),
+            configuredAvailable: Boolean(configuredCandidate),
         };
     }
 
     return {
         name: configured,
-        displayName: configuredCandidate ? configuredCandidate.displayName : configured,
+        displayName: configured,
         available: false,
-        virtual: configuredCandidate ? configuredCandidate.virtual : false,
+        virtual: false,
         isDefault: false,
         configured,
-        configuredAvailable: Boolean(configuredCandidate && configuredCandidate.available),
+        configuredAvailable: false,
         source: 'none',
     };
 }
 
 // Native printing — bypasses the OS print dialog and sends straight to the
 // configured physical printer, falling back to whichever connected printer
-// the OS reports when the configured one is missing or offline.
-ipcMain.handle('print-silently', async (event, printerRole) => {
-    const resolved = await resolvePrinter(event, printerRole);
+// the OS reports when the configured one is missing.
+ipcMain.handle('print-silently', async (event, printerRole, preferredName) => {
+    const resolved = await resolvePrinter(event, printerRole, preferredName);
 
-    if (!resolved.available || !resolved.name) {
+    if (!resolved.name) {
         return {
             success: false,
-            error: 'No connected receipt printer was detected. Check that the printer is powered on and connected, then try again.',
-            printer: resolved.name || null,
+            error: 'No receipt printer was detected. Check that the printer is powered on and connected, then try again.',
+            printer: null,
         };
     }
 

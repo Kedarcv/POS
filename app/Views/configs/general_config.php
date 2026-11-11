@@ -453,6 +453,18 @@
                 </div>
             </div>
 
+            <div class="form-group form-group-sm">
+                <?= form_label(lang('Config.backup_database'), 'config_backup_database', ['class' => 'control-label col-xs-2']) ?>
+                <div class="col-xs-6">
+                    <a href="<?= site_url('config/backup_db') ?>" class="btn btn-default btn-sm" id="config_backup_database">
+                        <span class="glyphicon glyphicon-download-alt">&nbsp;</span><?= lang('Config.backup_button') ?> (SQL)
+                    </a>
+                    <span class="help-block" style="margin-top: 4px;">
+                        Download a complete SQL export of the database for safe-keeping or migration.
+                    </span>
+                </div>
+            </div>
+
             <?= form_submit([
                 'name'  => 'submit_general',
                 'id'    => 'submit_general',

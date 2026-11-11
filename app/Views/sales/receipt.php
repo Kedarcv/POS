@@ -213,9 +213,10 @@ if (isset($error_message)) {
             var printReceipt = function() {
                 showOnly(printing);
 
+                var configuredDevice = '<?= esc($config['receipt_printer'] ?? $config['printer_device_name'] ?? '', 'js') ?>';
                 var result;
                 try {
-                    result = printdoc();
+                    result = printdoc(configuredDevice);
                 } catch (err) {
                     result = Promise.reject(err);
                 }
@@ -265,17 +266,18 @@ if (isset($error_message)) {
                 }
                 started = true;
 
+                var configuredDevice = '<?= esc($config['receipt_printer'] ?? $config['printer_device_name'] ?? '', 'js') ?>';
                 if (window.beamlinkPrint && window.beamlinkPrint.resolvePrinter) {
-                    window.beamlinkPrint.resolvePrinter('receipt_printer').then(function(info) {
+                    window.beamlinkPrint.resolvePrinter('receipt_printer', configuredDevice).then(function(info) {
                         if (!printerLabel) {
                             return;
                         }
 
-                        if (info && info.available && info.name) {
+                        if (info && info.name) {
                             printerLabel.textContent = (info.source === 'detected' ? 'Detected printer: ' : 'Sending to: ')
                                 + (info.displayName || info.name);
                         } else {
-                            printerLabel.textContent = 'No connected receipt printer was detected - looking again…';
+                            printerLabel.textContent = 'Connecting to the receipt printer…';
                         }
                     }).catch(function() {});
                 }

@@ -952,6 +952,10 @@ class Config extends Secure_Controller
             'receipt_show_total_discount'   => $this->request->getPost('receipt_show_total_discount') != null,
             'receipt_show_description'      => $this->request->getPost('receipt_show_description') != null,
             'receipt_show_serialnumber'     => $this->request->getPost('receipt_show_serialnumber') != null,
+            'receipt_printer'               => $this->request->getPost('receipt_printer'),
+            'invoice_printer'               => $this->request->getPost('invoice_printer'),
+            'takings_printer'               => $this->request->getPost('takings_printer'),
+            'printer_device_name'           => $this->request->getPost('receipt_printer'),
             'print_silently'                => $this->request->getPost('print_silently') != null,
             'print_header'                  => $this->request->getPost('print_header') != null,
             'print_footer'                  => $this->request->getPost('print_footer') != null,
@@ -1082,5 +1086,109 @@ class Config extends Secure_Controller
         $fallback = $fieldType === 'first' ? 'name' : '';
 
         return in_array($column, $allowed, true) ? $column : $fallback;
+    }
+
+    /**
+     * Creates and downloads a full SQL backup/export of the database.
+     *
+     * @return ResponseInterface
+     */
+    public function backup_db(): ResponseInterface
+    {
+        $employeeId = session('person_id');
+        if (!$this->employee->has_grant('config', $employeeId)) {
+            return redirect()->to('no_access/config');
+        }
+
+        $db = Database::connect();
+        $tables = $db->listTables();
+
+        $appName = config('App')->application_version ?? 'OSPOS';
+        $timestamp = date('Y-m-d H:i:s');
+        $dateStamp = date('Y-m-d_His');
+        $databaseName = $db->database;
+
+        $out = "-- ---------------------------------------------------------\n";
+        $out .= "-- Open Source Point of Sale / BeamLink POS Database Backup\n";
+        $out .= "-- Application Version: {$appName}\n";
+        $out .= "-- Database: `{$databaseName}`\n";
+        $out .= "-- Generation Date: {$timestamp}\n";
+        $out .= "-- ---------------------------------------------------------\n\n";
+        $out .= "SET FOREIGN_KEY_CHECKS=0;\n";
+        $out .= "SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';\n";
+        $out .= "SET time_zone = '+00:00';\n\n";
+
+        foreach ($tables as $table) {
+            $tableEscaped = '`' . str_replace('`', '``', $table) . '`';
+
+            $out .= "-- ---------------------------------------------------------\n";
+            $out .= "-- Table structure for {$tableEscaped}\n";
+            $out .= "-- ---------------------------------------------------------\n";
+            $out .= "DROP TABLE IF EXISTS {$tableEscaped};\n";
+
+            $createTableQuery = $db->query("SHOW CREATE TABLE {$tableEscaped}");
+            $createTableRow = $createTableQuery->getRowArray();
+            $createTableSql = $createTableRow['Create Table'] ?? ($createTableRow['Create View'] ?? null);
+
+            if ($createTableSql) {
+                $out .= $createTableSql . ";\n\n";
+            }
+
+            if (isset($createTableRow['Create Table'])) {
+                $countQuery = $db->query("SELECT COUNT(*) AS total FROM {$tableEscaped}");
+                $totalRows = (int) ($countQuery->getRow()->total ?? 0);
+
+                if ($totalRows > 0) {
+                    $batchSize = 500;
+                    $offset = 0;
+
+                    while ($offset < $totalRows) {
+                        $rowsQuery = $db->query("SELECT * FROM {$tableEscaped} LIMIT {$batchSize} OFFSET {$offset}");
+                        $rows = $rowsQuery->getResultArray();
+
+                        if (empty($rows)) {
+                            break;
+                        }
+
+                        $firstRow = $rows[0];
+                        $columns = array_keys($firstRow);
+                        $columnsList = implode(', ', array_map(static fn($c) => '`' . str_replace('`', '``', $c) . '`', $columns));
+
+                        $out .= "INSERT INTO {$tableEscaped} ({$columnsList}) VALUES\n";
+
+                        $valueRows = [];
+                        foreach ($rows as $row) {
+                            $escapedValues = [];
+                            foreach ($columns as $col) {
+                                $val = $row[$col];
+                                if ($val === null) {
+                                    $escapedValues[] = 'NULL';
+                                } elseif (is_int($val) || (is_numeric($val) && !preg_match('/^0[0-9]/', (string) $val) && !str_contains((string) $val, ' '))) {
+                                    $escapedValues[] = $val;
+                                } else {
+                                    $escapedValues[] = $db->escape($val);
+                                }
+                            }
+                            $valueRows[] = '(' . implode(', ', $escapedValues) . ')';
+                        }
+
+                        $out .= implode(",\n", $valueRows) . ";\n\n";
+                        $offset += $batchSize;
+                    }
+                }
+            }
+        }
+
+        $out .= "SET FOREIGN_KEY_CHECKS=1;\n";
+        $out .= "-- End of database backup\n";
+
+        $fileName = 'ospos_backup_' . $dateStamp . '.sql';
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/sql; charset=utf-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"')
+            ->setHeader('Cache-Control', 'must-revalidate, post-check=0, pre-check=0')
+            ->setHeader('Pragma', 'public')
+            ->setBody($out);
     }
 }

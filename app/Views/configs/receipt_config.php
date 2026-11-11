@@ -258,13 +258,17 @@
 
             <div class="form-group form-group-sm">
                 <?= form_label(lang('Config.receipt_printer'), 'config_receipt_printer', ['class' => 'control-label col-xs-2']) ?>
-                <div class="col-xs-2">
-                    <?= form_dropdown('receipt_printer', [], ' ', 'id="receipt_printer" class="form-control"') ?>
+                <div class="col-xs-3">
+                    <?php
+                    $savedReceiptPrinter = $config['receipt_printer'] ?? $config['printer_device_name'] ?? '';
+                    $initialOptions = !empty($savedReceiptPrinter) ? [$savedReceiptPrinter => $savedReceiptPrinter] : [];
+                    ?>
+                    <?= form_dropdown('receipt_printer', $initialOptions, $savedReceiptPrinter, 'id="receipt_printer" class="form-control" data-saved="' . esc($savedReceiptPrinter, 'attr') . '"') ?>
                 </div>
                 <div class="col-xs-6">
                     <p class="help-block" style="margin: 0;">
                         Plug a USB/cable printer in, or pair a Bluetooth printer, then click Detect Printers.
-                        Receipts print straight to the selected device.
+                        Receipts print straight to the selected device automatically without a print dialog.
                         <a href="<?= base_url('config/printer') ?>">Advanced printer settings</a>
                     </p>
                 </div>
@@ -272,15 +276,23 @@
 
             <div class="form-group form-group-sm">
                 <?= form_label(lang('Config.invoice_printer'), 'config_invoice_printer', ['class' => 'control-label col-xs-2']) ?>
-                <div class="col-xs-2">
-                    <?= form_dropdown('invoice_printer', [], ' ', 'id="invoice_printer" class="form-control"') ?>
+                <div class="col-xs-3">
+                    <?php
+                    $savedInvoicePrinter = $config['invoice_printer'] ?? '';
+                    $initialInvoiceOptions = !empty($savedInvoicePrinter) ? [$savedInvoicePrinter => $savedInvoicePrinter] : [];
+                    ?>
+                    <?= form_dropdown('invoice_printer', $initialInvoiceOptions, $savedInvoicePrinter, 'id="invoice_printer" class="form-control" data-saved="' . esc($savedInvoicePrinter, 'attr') . '"') ?>
                 </div>
             </div>
 
             <div class="form-group form-group-sm">
                 <?= form_label(lang('Config.takings_printer'), 'config_takings_printer', ['class' => 'control-label col-xs-2']) ?>
-                <div class="col-xs-2">
-                    <?= form_dropdown('takings_printer', [], ' ', 'id="takings_printer" class="form-control"') ?>
+                <div class="col-xs-3">
+                    <?php
+                    $savedTakingsPrinter = $config['takings_printer'] ?? '';
+                    $initialTakingsOptions = !empty($savedTakingsPrinter) ? [$savedTakingsPrinter => $savedTakingsPrinter] : [];
+                    ?>
+                    <?= form_dropdown('takings_printer', $initialTakingsOptions, $savedTakingsPrinter, 'id="takings_printer" class="form-control" data-saved="' . esc($savedTakingsPrinter, 'attr') . '"') ?>
                 </div>
             </div>
 
@@ -389,6 +401,7 @@
 
                     roles.forEach(function(role) {
                         var $select = $('#' + role);
+                        var saved = $select.data('saved');
                         var current = preserveSelection ? $select.val() : null;
 
                         $select.empty();
@@ -396,13 +409,17 @@
                             $select.append($('<option>', { value: printer.name }).text(printer.displayName || printer.name));
                         });
 
-                        if (current) {
-                            $select.val(current);
-                        } else {
-                            window.beamlinkPrint.getSelectedPrinter(role).then(function(selected) {
-                                $select.val(selected);
-                            });
-                        }
+                        window.beamlinkPrint.getSelectedPrinter(role).then(function(selected) {
+                            var toSelect = current || selected || saved;
+                            if (toSelect && printers.some(function(p) { return p.name === toSelect; })) {
+                                $select.val(toSelect);
+                                window.beamlinkPrint.setSelectedPrinter(role, toSelect);
+                            } else if (printers.length > 0) {
+                                var best = printers.find(function(p) { return /(receipt|thermal|epson|pos)/i.test(p.name); }) || printers[0];
+                                $select.val(best.name);
+                                window.beamlinkPrint.setSelectedPrinter(role, best.name);
+                            }
+                        });
 
                         $select.off('change').on('change', function() {
                             window.beamlinkPrint.setSelectedPrinter(role, $(this).val());
