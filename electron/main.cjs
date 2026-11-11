@@ -165,30 +165,183 @@ function writeSettings(settings) {
 
 const VALID_PRINTER_ROLES = new Set(['receipt_printer', 'invoice_printer', 'takings_printer']);
 
-// Native printing — bypasses the OS print dialog and sends straight to
-// whichever physical printer is configured for that role (receipt/invoice/
-// takings can each be a different printer, e.g. a thermal receipt printer
-// vs. the office laser printer for invoices).
-ipcMain.handle('print-silently', (event, printerRole) => {
+const VIRTUAL_PRINTER_PATTERN = /(anydesk|onenote|print to pdf|xps|fax|send to)/i;
+const RECEIPT_PRINTER_PATTERN = /(receipt|thermal|epson|star|bixolon|xprinter|rongta|zywell|gprinter|hoin|snbc|pos[- _]?[58])/i;
+const PRINTER_STATE_CACHE_MS = 10000;
+const BLOCKING_PRINTER_ERRORS = new Set([4, 6, 7, 8, 9, 10, 11, 12, 13]);
+
+let printerStateCache = { at: 0, states: null };
+
+function printerText(printer) {
+    return `${printer.displayName || ''} ${printer.name || ''}`.trim();
+}
+
+function isVirtualPrinter(printer) {
+    return VIRTUAL_PRINTER_PATTERN.test(printerText(printer));
+}
+
+function isReceiptPrinter(printer) {
+    return RECEIPT_PRINTER_PATTERN.test(printerText(printer));
+}
+
+function windowsPrinterIsReady(state) {
+    if (!state) return true;
+    if (state.WorkOffline) return false;
+
+    const status = Number(state.PrinterStatus);
+    const error = Number(state.DetectedErrorState);
+
+    if (BLOCKING_PRINTER_ERRORS.has(error)) return false;
+    if (status === 6 || status === 7) return false;
+
+    return status === 3 || status === 4 || status === 5 || error === 2;
+}
+
+function queryWindowsPrinterStates() {
+    if (!isWin) return Promise.resolve(null);
+
+    if (printerStateCache.states && Date.now() - printerStateCache.at < PRINTER_STATE_CACHE_MS) {
+        return Promise.resolve(printerStateCache.states);
+    }
+
+    const script = 'Get-CimInstance Win32_Printer | Select-Object Name,Default,WorkOffline,PrinterStatus,DetectedErrorState | ConvertTo-Json -Compress';
+
+    return new Promise((resolve) => {
+        const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true });
+        let stdout = '';
+
+        child.stdout.on('data', (buf) => { stdout += buf.toString(); });
+        child.on('error', () => resolve(printerStateCache.states));
+        child.on('close', () => {
+            let parsed;
+            try {
+                parsed = JSON.parse(stdout.trim() || '[]');
+            } catch {
+                return resolve(printerStateCache.states);
+            }
+
+            const rows = Array.isArray(parsed) ? parsed : [parsed];
+            const states = new Map();
+            for (const row of rows) {
+                if (row && row.Name) states.set(String(row.Name).toLowerCase(), row);
+            }
+
+            printerStateCache = { at: Date.now(), states };
+            resolve(states);
+        });
+    });
+}
+
+async function resolvePrinter(event, printerRole) {
     const role = VALID_PRINTER_ROLES.has(printerRole) ? printerRole : 'receipt_printer';
-    const deviceName = (readSettings().printers || {})[role] || undefined;
+    const configured = (readSettings().printers || {})[role] || '';
+
+    let printers = [];
+    try {
+        printers = await event.sender.getPrintersAsync();
+    } catch (err) {
+        log(`getPrintersAsync failed: ${err.message}`);
+    }
+
+    const states = await queryWindowsPrinterStates();
+    let defaultName = '';
+    if (states) {
+        for (const [name, state] of states) {
+            if (state && state.Default) defaultName = name;
+        }
+    }
+
+    const candidates = printers.map((printer) => ({
+        name: printer.name,
+        displayName: printer.displayName || printer.name,
+        available: states ? windowsPrinterIsReady(states.get(String(printer.name).toLowerCase())) : true,
+        virtual: isVirtualPrinter(printer),
+        isDefault: String(printer.name).toLowerCase() === defaultName,
+        configured: configured !== '' && String(printer.name).toLowerCase() === configured.toLowerCase(),
+    }));
+
+    const configuredCandidate = candidates.find((printer) => printer.configured);
+    if (configuredCandidate && configuredCandidate.available) {
+        return { ...configuredCandidate, source: 'configured', configured };
+    }
+
+    const connected = candidates.filter((printer) => printer.available && !printer.virtual);
+    const detected = connected.find((printer) => isReceiptPrinter(printer))
+        || connected.find((printer) => printer.isDefault)
+        || connected[0];
+
+    if (detected) {
+        if (!configured) {
+            const settings = readSettings();
+            settings.printers = settings.printers || {};
+            settings.printers[role] = detected.name;
+            writeSettings(settings);
+        }
+
+        return {
+            ...detected,
+            source: 'detected',
+            configured,
+            configuredAvailable: Boolean(configuredCandidate && configuredCandidate.available),
+        };
+    }
+
+    return {
+        name: configured,
+        displayName: configuredCandidate ? configuredCandidate.displayName : configured,
+        available: false,
+        virtual: configuredCandidate ? configuredCandidate.virtual : false,
+        isDefault: false,
+        configured,
+        configuredAvailable: Boolean(configuredCandidate && configuredCandidate.available),
+        source: 'none',
+    };
+}
+
+// Native printing — bypasses the OS print dialog and sends straight to the
+// configured physical printer, falling back to whichever connected printer
+// the OS reports when the configured one is missing or offline.
+ipcMain.handle('print-silently', async (event, printerRole) => {
+    const resolved = await resolvePrinter(event, printerRole);
+
+    if (!resolved.available || !resolved.name) {
+        return {
+            success: false,
+            error: 'No connected receipt printer was detected. Check that the printer is powered on and connected, then try again.',
+            printer: resolved.name || null,
+        };
+    }
 
     return new Promise((resolve) => {
         event.sender.print(
-            { silent: true, printBackground: true, deviceName, margins: { marginType: 'none' } },
-            (success, failureReason) => resolve({ success, error: success ? null : failureReason }),
+            { silent: true, printBackground: true, deviceName: resolved.name, margins: { marginType: 'none' } },
+            (success, failureReason) => resolve({
+                success,
+                error: success ? null : (failureReason || 'The printer did not accept the receipt.'),
+                printer: resolved.name,
+                source: resolved.source,
+            }),
         );
     });
 });
 
 ipcMain.handle('list-printers', async (event) => {
     try {
-        return await event.sender.getPrintersAsync();
+        const printers = await event.sender.getPrintersAsync();
+        const states = await queryWindowsPrinterStates();
+
+        return printers.map((printer) => ({
+            ...printer,
+            available: states ? windowsPrinterIsReady(states.get(String(printer.name).toLowerCase())) : true,
+            virtual: isVirtualPrinter(printer),
+        }));
     } catch (err) {
         log(`getPrintersAsync failed: ${err.message}`);
         return [];
     }
 });
+
+ipcMain.handle('resolve-printer', (event, printerRole) => resolvePrinter(event, printerRole));
 
 ipcMain.handle('get-selected-printer', (event, printerRole) => {
     const role = VALID_PRINTER_ROLES.has(printerRole) ? printerRole : 'receipt_printer';

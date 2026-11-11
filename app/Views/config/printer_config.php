@@ -107,7 +107,7 @@
                             </select>
                             <p class="help-block" style="margin-bottom: 4px;">
                                 Plug the printer in with its USB cable, or pair a Bluetooth printer first, then click Detect.
-                                The selected printer receives every receipt automatically — no print dialog.
+                                Connected printers are detected automatically and used when the selected one is offline.
                             </p>
                             <button type="button" class="btn btn-default btn-sm" id="detect_printers_button">
                                 <span class="glyphicon glyphicon-search"></span> Detect Printers
@@ -313,7 +313,17 @@
 
         // Lists the printers the operating system already knows about —
         // that covers USB/cable printers and Bluetooth printers paired
-        // through the OS Bluetooth settings.
+        // through the OS Bluetooth settings. Printers the OS reports as
+        // offline are labelled, and the first connected printer is selected
+        // automatically.
+        function printerName(printer) {
+            return printer.displayName || printer.name;
+        }
+
+        function isReceiptPrinter(printer) {
+            return /(receipt|thermal|epson|star|bixolon|xprinter|rongta|zywell|gprinter|hoin|snbc|pos[- _]?[58])/i.test(printerName(printer));
+        }
+
         function detectPrinters() {
             if (!window.beamlinkPrint) {
                 setPrinterStatus('Printer detection is only available in the desktop app.', true);
@@ -332,19 +342,41 @@
                 }
 
                 printers.forEach(function(printer) {
+                    var label = printerName(printer);
+
+                    if (printer.virtual) {
+                        label += ' (virtual)';
+                    }
+                    if (printer.available === false) {
+                        label += ' (offline)';
+                    }
+
                     $select.append($('<option>', {
                         value: printer.name
-                    }).text(printer.displayName || printer.name));
+                    }).text(label));
                 });
 
-                if (current) {
-                    $select.val(current);
-                } else {
-                    $select.val(printers[0].name);
-                    window.beamlinkPrint.setSelectedPrinter('receipt_printer', printers[0].name);
+                var currentPrinter = printers.find(function(printer) { return printer.name === current; });
+                var connected = printers.filter(function(printer) {
+                    return printer.available !== false && !printer.virtual;
+                });
+                var best = connected.find(isReceiptPrinter) || connected[0];
+                var selection = current;
+
+                if (!currentPrinter) {
+                    selection = best ? best.name : printers[0].name;
+                } else if ((currentPrinter.available === false || currentPrinter.virtual) && best) {
+                    selection = best.name;
                 }
 
-                setPrinterStatus(printers.length + ' printer(s) detected.');
+                $select.val(selection);
+                window.beamlinkPrint.setSelectedPrinter('receipt_printer', selection);
+
+                if (best) {
+                    setPrinterStatus(printers.length + ' printer(s) detected. Using ' + printerName(best) + '.');
+                } else {
+                    setPrinterStatus('No connected printer found. Check the cable / pairing and try again.', true);
+                }
             }).catch(function() {
                 setPrinterStatus('Could not list printers.', true);
             });
@@ -367,16 +399,11 @@
             setPrinterStatus('Pair the printer in the Bluetooth settings, then click Detect Printers.');
         });
 
-        // On load, make sure the saved printer is also the one the print
-        // bridge uses (settings.json lives on the desktop, the app config in
-        // the database — keep them in sync).
+        // On load, refresh the printer list so an offline saved printer is
+        // replaced by a connected one (settings.json lives on the desktop,
+        // the app config in the database — keep them in sync).
         if (window.beamlinkPrint) {
-            var saved = $('#printer_device_name').val();
-            if (saved) {
-                window.beamlinkPrint.setSelectedPrinter('receipt_printer', saved);
-            } else {
-                detectPrinters();
-            }
+            detectPrinters();
         }
 
         // Toggle terminal fields

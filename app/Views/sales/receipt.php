@@ -265,12 +265,17 @@ if (isset($error_message)) {
                 }
                 started = true;
 
-                if (window.beamlinkPrint && window.beamlinkPrint.getSelectedPrinter) {
-                    window.beamlinkPrint.getSelectedPrinter('receipt_printer').then(function(printerName) {
-                        if (printerLabel) {
-                            printerLabel.textContent = printerName
-                                ? 'Sending to: ' + printerName
-                                : 'No receipt printer selected - using the system default.';
+                if (window.beamlinkPrint && window.beamlinkPrint.resolvePrinter) {
+                    window.beamlinkPrint.resolvePrinter('receipt_printer').then(function(info) {
+                        if (!printerLabel) {
+                            return;
+                        }
+
+                        if (info && info.available && info.name) {
+                            printerLabel.textContent = (info.source === 'detected' ? 'Detected printer: ' : 'Sending to: ')
+                                + (info.displayName || info.name);
+                        } else {
+                            printerLabel.textContent = 'No connected receipt printer was detected - looking again…';
                         }
                     }).catch(function() {});
                 }
