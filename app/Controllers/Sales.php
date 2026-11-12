@@ -1246,6 +1246,22 @@ class Sales extends Secure_Controller
         }
         $data['receipt_template_view'] = $receipt_template;
 
+        // Check if there is an existing ZIMRA fiscal record for this sale
+        try {
+            $zimraReceipt = (new \App\Models\Zimra_receipt())->findBySaleId((int)$sale_id);
+            if ($zimraReceipt && $zimraReceipt->status === 'SUBMITTED') {
+                $data['zimra'] = [
+                    'success'           => true,
+                    'verification_code' => $zimraReceipt->verification_code,
+                    'qr_url'            => $zimraReceipt->qr_url,
+                    'global_no'         => $zimraReceipt->receipt_global_no,
+                    'fiscal_day_no'     => $zimraReceipt->fiscal_day_no,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // Non-blocking
+        }
+
         return $data;
     }
 

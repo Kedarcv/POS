@@ -62,3 +62,21 @@
 .discount {
     font-weight: bold;
 }
+
+@media print {
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
+    .print_hide, nav, .navbar, #footer {
+        display: none !important;
+    }
+    #receipt_wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}
+

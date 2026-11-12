@@ -201,7 +201,7 @@ if (isset($error_message)) {
             <tr>
                 <td colspan="<?= $invoice_columns - 3 ?>" class="blank"> </td>
                 <td colspan="2" class="total-line"><?= $splitpayment[0] ?></td>
-                <td class="total-value" id="paid"><?= to_currency($payment['payment_amount'] * -1) ?></td>
+                <td class="total-value" id="paid"><?= to_currency(abs($payment['payment_amount'])) ?></td>
             </tr>
         <?php } ?>
 

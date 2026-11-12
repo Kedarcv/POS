@@ -167,6 +167,9 @@ if (isset($error_message)) {
                 <button type="button" class="btn btn-default btn-block" id="print-again-button">
                     <span class="glyphicon glyphicon-print"></span> Print Receipt Again
                 </button>
+                <a href="<?= site_url("sales/invoice/$sale_id_num") ?>" target="_blank" class="btn btn-info btn-block" id="print-a4-button" style="margin-top: 6px;">
+                    <span class="glyphicon glyphicon-file"></span> Print A4 Receipt
+                </a>
                 <button type="button" class="btn btn-link btn-block" id="view-receipt-button">View Receipt</button>
             </div>
 
@@ -177,6 +180,9 @@ if (isset($error_message)) {
                 <button type="button" class="btn btn-primary btn-lg btn-block" id="retry-print-button">
                     <span class="glyphicon glyphicon-refresh"></span> Try Printing Again
                 </button>
+                <a href="<?= site_url("sales/invoice/$sale_id_num") ?>" target="_blank" class="btn btn-info btn-block" id="print-a4-button-error" style="margin-top: 6px;">
+                    <span class="glyphicon glyphicon-file"></span> Print A4 Receipt
+                </a>
                 <button type="button" class="btn btn-success btn-block" id="start-another-sale-button-error">
                     <span class="glyphicon glyphicon-shopping-cart"></span> Start Another Sale
                 </button>
@@ -299,6 +305,9 @@ if (isset($error_message)) {
 <div class="print_hide" id="control_buttons" style="text-align: right;">
     <a href="javascript:printdoc();">
         <div class="btn btn-info btn-sm" id="show_print_button"><?= '<span class="glyphicon glyphicon-print">&nbsp;</span>' . lang('Common.print') ?></div>
+    </a>
+    <a href="<?= site_url("sales/invoice/$sale_id_num") ?>" target="_blank" class="btn btn-primary btn-sm" id="show_a4_button">
+        <span class="glyphicon glyphicon-file">&nbsp;</span>Print A4 Receipt
     </a>
     <?php if (!empty($customer_email)): ?>
         <a href="javascript:void(0);">

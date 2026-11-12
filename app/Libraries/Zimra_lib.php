@@ -635,10 +635,51 @@ class Zimra_lib
     /**
      * Renders a self-contained data: URI (SVG) for the receipt's QR code —
      * safe to drop straight into an <img src>, no extra request or file needed.
+     * Uses pure-PHP SVG by default so it works reliably on all environments
+     * without requiring the PHP GD or Imagick extensions.
      */
     public function renderQrDataUri(string $qrUrl): string
     {
-        return (new QRCode(new QROptions(['imageBase64' => true])))->render($qrUrl);
+        if (empty($qrUrl)) {
+            return '';
+        }
+
+        try {
+            if (class_exists(QRCode::class)) {
+                // SVG output generates vector SVG without needing PHP GD / Imagick
+                $options = new QROptions([
+                    'outputType'  => QRCode::OUTPUT_MARKUP_SVG,
+                    'imageBase64' => true,
+                    'scale'       => 4,
+                ]);
+                return (new QRCode($options))->render($qrUrl);
+            }
+        } catch (\Throwable $e) {
+            try {
+                if (class_exists(QRCode::class)) {
+                    $options = new QROptions([
+                        'outputType'  => QRCode::OUTPUT_IMAGE_PNG,
+                        'imageBase64' => true,
+                    ]);
+                    return (new QRCode($options))->render($qrUrl);
+                }
+            } catch (\Throwable $t) {
+                log_message('error', 'renderQrDataUri failed: ' . $t->getMessage());
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Generates a 16-character deterministic verification code in the format
+     * XXXX-XXXX-XXXX-XXXX, styled after TM Pick n Pay Zimbabwe fiscal receipts.
+     */
+    public static function buildReceiptVerificationCode(string $seed): string
+    {
+        $clean = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', hash('sha256', $seed)));
+        $code = substr($clean, 0, 16);
+        return implode('-', str_split($code, 4));
     }
 
     protected function buildVerificationCode(string $hash): string

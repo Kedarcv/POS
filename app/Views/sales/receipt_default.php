@@ -1,7 +1,12 @@
 <?php
 /**
+ * Default Thermal Receipt View (58mm / 80mm)
+ * Structured with clean monospace layout, dashed dividers, positive payment amounts,
+ * terms & conditions summary, and TM-style fiscal verification QR code.
+ *
  * @var string $transaction_time
- * @var int $sale_id
+ * @var int $sale_id_num
+ * @var string $sale_id
  * @var string $invoice_number
  * @var string $employee
  * @var array $cart
@@ -14,187 +19,226 @@
  * @var float $amount_change
  * @var string $barcode
  * @var array $config
+ * @var string|null $customer
+ * @var array|null $zimra
  */
+
+$fontSize = !empty($config['receipt_font_size']) ? (int)$config['receipt_font_size'] : 12;
+$companyName = !empty($config['receipt_show_company_name']) && !empty($config['company'])
+    ? $config['company']
+    : 'BEAMLINK TECH';
+$companyEmail = !empty($config['email']) ? $config['email'] : 'sales@beamlink.co.zw';
 ?>
 
-<div id="receipt_wrapper" style="font-size: <?= $config['receipt_font_size'] ?>px;">
-    <div id="receipt_header">
-        <div style="text-align: center; margin-bottom: 5px;">
-            <img src="<?= base_url('images/logo.png') ?>" alt="BeamLink" style="max-width: 120px; height: auto;">
-        </div>
-
-        <?php if ($config['company_logo'] != '') { ?>
-            <div id="company_name">
-                <img id="image" src="<?= base_url('uploads/' . esc($config['company_logo'], 'url')) ?>" alt="company_logo">
+<div id="receipt_wrapper" style="font-size: <?= $fontSize ?>px; font-family: 'Courier New', Courier, monospace, 'Lucida Console'; width: 100%; max-width: 320px; margin: 0 auto; color: #000; line-height: 1.25;">
+    <div id="receipt_header" style="text-align: center;">
+        <?php if (!empty($config['company_logo'])) { ?>
+            <div style="margin-bottom: 4px;">
+                <img id="image" src="<?= base_url('uploads/' . esc($config['company_logo'], 'url')) ?>" alt="" style="max-width: 140px; height: auto;" onerror="this.style.display='none'">
             </div>
         <?php } ?>
 
-        <?php if ($config['receipt_show_company_name']) { ?>
-            <div id="company_name" style="font-weight: bold; text-align: center; font-size: 120%;"><?= nl2br(esc($config['company'])) ?></div>
-        <?php } else { ?>
-            <div id="company_name" style="font-weight: bold; text-align: center; font-size: 120%;">BeamLink</div>
+        <div id="company_name" style="font-weight: bold; font-size: 130%; text-transform: uppercase; margin-bottom: 2px;">
+            <?= nl2br(esc($companyName)) ?>
+        </div>
+
+        <?php if (!empty($config['address'])) { ?>
+            <div id="company_address"><?= nl2br(esc($config['address'])) ?></div>
         <?php } ?>
 
-        <div id="company_address" style="text-align: center;"><?= nl2br(esc($config['address'])) ?></div>
-        <div id="company_phone" style="text-align: center;"><?= esc($config['phone']) ?></div>
-
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-
-        <div id="sale_receipt" style="text-align: center; font-weight: bold;"><?= lang('Sales.receipt') ?></div>
-        <div id="sale_time" style="text-align: center;"><?= ($transaction_time) ?></div>
-
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-    </div>
-
-    <div id="receipt_general_info">
-        <?php if (isset($customer)) { ?>
-            <div id="customer"><?= lang('Customers.customer') . esc(": $customer") ?></div>
+        <?php if (!empty($config['phone'])) { ?>
+            <div id="company_phone">CELL: <?= esc($config['phone']) ?></div>
         <?php } ?>
 
-        <div id="sale_id"><?= lang('Sales.id') . esc(": $sale_id") ?></div>
+        <?php if (!empty($companyEmail)) { ?>
+            <div id="company_email"><?= esc($companyEmail) ?></div>
+        <?php } ?>
+
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+        <div style="font-weight: bold;"><?= lang('Sales.receipt') ?></div>
+        <div>Receipt: <?= esc($sale_id) ?></div>
+        <div><?= esc($transaction_time) ?></div>
+
+        <?php if (isset($customer) && !empty($customer)) { ?>
+            <div><?= lang('Customers.customer') . ': ' . esc($customer) ?></div>
+        <?php } ?>
 
         <?php if (!empty($invoice_number)) { ?>
-            <div id="invoice_number"><?= lang('Sales.invoice_number') . esc(": $invoice_number") ?></div>
+            <div><?= lang('Sales.invoice_number') . ': ' . esc($invoice_number) ?></div>
         <?php } ?>
 
-        <div id="employee"><?= lang('Employees.employee') . esc(": $employee") ?></div>
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
     </div>
 
-    <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-
-    <table id="receipt_items">
-        <tr>
-            <th style="width: 40%;"><?= lang('Sales.description_abbrv') ?></th>
-            <th style="width: 20%;"><?= lang('Sales.price') ?></th>
-            <th style="width: 20%;"><?= lang('Sales.quantity') ?></th>
-            <th style="width: 20%;" class="total-value"><?= lang('Sales.total') ?></th>
-            <?php if ($config['receipt_show_tax_ind']) { ?>
-                <th style="width: 20%;"></th>
-            <?php } ?>
-        </tr>
-        <?php
-        foreach ($cart as $line => $item) {
-            if ($item['print_option'] == PRINT_YES) {
-        ?>
-                <tr>
-                    <td><?= esc(ucfirst($item['name'] . ' ' . $item['attribute_values'])) ?></td>
-                    <td><?= to_currency($item['price']) ?></td>
-                    <td><?= to_quantity_decimals($item['quantity']) ?></td>
-                    <td class="total-value"><?= to_currency($item[($config['receipt_show_total_discount'] ? 'total' : 'discounted_total')]) ?></td>
-                    <?php if ($config['receipt_show_tax_ind']) { ?>
-                        <td><?= esc($item['taxed_flag']) ?></td>
-                    <?php } ?>
-                </tr>
-                <tr>
-                    <?php if ($config['receipt_show_description']) { ?>
-                        <td colspan="2"><?= esc($item['description']) ?></td>
-                    <?php } ?>
-
-                    <?php if ($config['receipt_show_serialnumber']) { ?>
-                        <td><?= esc($item['serialnumber']) ?></td>
-                    <?php } ?>
-                </tr>
-                <?php if ($item['discount'] > 0) { ?>
+    <table id="receipt_items" style="width: 100%; border-collapse: collapse; table-layout: fixed; margin: 4px 0;">
+        <thead>
+            <tr style="border-bottom: 1px dashed #000;">
+                <th style="width: 44%; text-align: left; padding: 2px 2px; font-weight: bold;"><?= lang('Sales.description_abbrv') ?></th>
+                <th style="width: 20%; text-align: right; padding: 2px 2px; font-weight: bold;"><?= lang('Sales.price') ?></th>
+                <th style="width: 14%; text-align: center; padding: 2px 2px; font-weight: bold;"><?= lang('Sales.quantity') ?></th>
+                <th style="width: 22%; text-align: right; padding: 2px 2px; font-weight: bold;"><?= lang('Sales.total') ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            $grossQuantity = 0;
+            foreach ($cart as $line => $item) {
+                if ($item['print_option'] == PRINT_YES) {
+                    $grossQuantity += (float)$item['quantity'];
+                    $itemTotal = $item[($config['receipt_show_total_discount'] ? 'total' : 'discounted_total')];
+            ?>
                     <tr>
-                        <?php if ($item['discount_type'] == FIXED) { ?>
-                            <td colspan="3" class="discount"><?= to_currency($item['discount']) . " " . lang('Sales.discount') ?></td>
-                        <?php } elseif ($item['discount_type'] == PERCENT) { ?>
-                            <td colspan="3" class="discount"><?= to_decimals($item['discount']) . " " . lang('Sales.discount_included') ?></td>
-                        <?php } ?>
-                        <td class="total-value"><?= to_currency($item['discounted_total']) ?></td>
+                        <td style="text-align: left; padding: 2px 2px; word-break: break-word;">
+                            <?= esc(ucfirst($item['name'] . ($item['attribute_values'] ? ' ' . $item['attribute_values'] : ''))) ?>
+                        </td>
+                        <td style="text-align: right; padding: 2px 2px; white-space: nowrap;">
+                            <?= to_currency($item['price']) ?>
+                        </td>
+                        <td style="text-align: center; padding: 2px 2px; white-space: nowrap;">
+                            <?= to_quantity_decimals($item['quantity']) ?>
+                        </td>
+                        <td style="text-align: right; padding: 2px 2px; white-space: nowrap;">
+                            <?= to_currency($itemTotal) ?>
+                        </td>
                     </tr>
-        <?php
+                    <?php if (!empty($item['description']) && !empty($config['receipt_show_description'])) { ?>
+                        <tr>
+                            <td colspan="4" style="font-size: 85%; padding: 0 2px 2px; color: #333;"><?= esc($item['description']) ?></td>
+                        </tr>
+                    <?php } ?>
+                    <?php if (!empty($item['serialnumber']) && !empty($config['receipt_show_serialnumber'])) { ?>
+                        <tr>
+                            <td colspan="4" style="font-size: 85%; padding: 0 2px 2px;"><?= lang('Sales.serial') . ': ' . esc($item['serialnumber']) ?></td>
+                        </tr>
+                    <?php } ?>
+                    <?php if ($item['discount'] > 0) { ?>
+                        <tr>
+                            <td colspan="3" style="text-align: right; font-size: 85%; padding: 0 2px;">
+                                <?= ($item['discount_type'] == FIXED) ? to_currency($item['discount']) . ' ' . lang('Sales.discount') : to_decimals($item['discount']) . '% ' . lang('Sales.discount') ?>
+                            </td>
+                            <td style="text-align: right; font-size: 85%; padding: 0 2px;"><?= to_currency($item['discounted_total']) ?></td>
+                        </tr>
+            <?php
+                    }
                 }
             }
-        }
-        ?>
+            ?>
+        </tbody>
+    </table>
 
-        <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+    <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+    <table style="width: 100%; border-collapse: collapse; margin: 2px 0;">
+        <tr>
+            <td style="text-align: left; padding: 1px 2px;">Gross Total (Qty):</td>
+            <td style="text-align: right; padding: 1px 2px;"><?= to_quantity_decimals($grossQuantity) ?></td>
+        </tr>
 
         <?php if ($config['receipt_show_total_discount'] && $discount > 0) { ?>
             <tr>
-                <td colspan="3" style="text-align: right;"><?= lang('Sales.sub_total') ?></td>
-                <td style="text-align: right;"><?= to_currency($prediscount_subtotal) ?></td>
+                <td style="text-align: left; padding: 1px 2px;"><?= lang('Sales.sub_total') ?>:</td>
+                <td style="text-align: right; padding: 1px 2px;"><?= to_currency($prediscount_subtotal) ?></td>
             </tr>
             <tr>
-                <td colspan="3" class="total-value"><?= lang('Sales.customer_discount') ?>:</td>
-                <td class="total-value"><?= to_currency($discount * -1) ?></td>
+                <td style="text-align: left; padding: 1px 2px;"><?= lang('Sales.customer_discount') ?>:</td>
+                <td style="text-align: right; padding: 1px 2px;"><?= to_currency(abs($discount) * -1) ?></td>
             </tr>
         <?php } ?>
 
         <?php if ($config['receipt_show_taxes']) { ?>
             <tr>
-                <td colspan="3" style="text-align: right;"><?= lang('Sales.sub_total') ?></td>
-                <td style="text-align: right;"><?= to_currency($subtotal) ?></td>
+                <td style="text-align: left; padding: 1px 2px;"><?= lang('Sales.sub_total') ?>:</td>
+                <td style="text-align: right; padding: 1px 2px;"><?= to_currency($subtotal) ?></td>
             </tr>
             <?php foreach ($taxes as $tax_group_index => $tax) { ?>
                 <tr>
-                    <td colspan="3" class="total-value"><?= (float)$tax['tax_rate'] . '% ' . esc($tax['tax_group']) ?>:</td>
-                    <td class="total-value"><?= to_currency_tax($tax['sale_tax_amount']) ?></td>
+                    <td style="text-align: left; padding: 1px 2px;"><?= (float)$tax['tax_rate'] . '% ' . esc($tax['tax_group']) ?>:</td>
+                    <td style="text-align: right; padding: 1px 2px;"><?= to_currency_tax($tax['sale_tax_amount']) ?></td>
                 </tr>
-        <?php
-            }
-        }
-        ?>
-
-        <tr></tr>
-
-        <?php $border = (!$config['receipt_show_taxes'] && !($config['receipt_show_total_discount'] && $discount > 0)); ?>
-        <tr>
-            <td colspan="3" style="text-align: right; font-weight: bold;<?= $border ? ' border-top: 2px solid black;' : '' ?>"><?= lang('Sales.total') ?></td>
-            <td style="text-align: right; font-weight: bold;<?= $border ? ' border-top: 2px solid black;' : '' ?>"><?= to_currency($total) ?></td>
-        </tr>
-
-        <tr>
-            <td colspan="4">&nbsp;</td>
-        </tr>
-
-        <?php
-        $only_sale_check = false;
-        $show_giftcard_remainder = false;
-        foreach ($payments as $payment_id => $payment) {
-            $only_sale_check |= $payment['payment_type'] == lang('Sales.check');
-            $splitpayment = explode(':', $payment['payment_type']);
-            $show_giftcard_remainder |= $splitpayment[0] == lang('Sales.giftcard');
-        ?>
-            <tr>
-                <td colspan="3" style="text-align: right;"><?= esc($splitpayment[0]) ?> </td>
-                <td class="total-value"><?= to_currency($payment['payment_amount'] * -1) ?></td>
-            </tr>
+            <?php } ?>
         <?php } ?>
 
-        <tr>
-            <td colspan="4">&nbsp;</td>
-        </tr>
-
-        <?php if (isset($cur_giftcard_value) && $show_giftcard_remainder) { ?>
-            <tr>
-                <td colspan="3" style="text-align: right;"><?= lang('Sales.giftcard_balance') ?></td>
-                <td class="total-value"><?= to_currency($cur_giftcard_value) ?></td>
-            </tr>
-        <?php } ?>
-        <tr>
-            <td colspan="3" style="text-align: right; font-weight: bold;"> <?= lang($amount_change >= 0 ? ($only_sale_check ? 'Sales.check_balance' : 'Sales.change_due') : 'Sales.amount_due') ?> </td>
-            <td class="total-value" style="font-weight: bold;"><?= to_currency($amount_change) ?></td>
+        <tr style="font-weight: bold; font-size: 110%;">
+            <td style="text-align: left; padding: 4px 2px; border-top: 1px dashed #000; border-bottom: 1px dashed #000;">Net Total:</td>
+            <td style="text-align: right; padding: 4px 2px; border-top: 1px dashed #000; border-bottom: 1px dashed #000;"><?= to_currency($total) ?></td>
         </tr>
     </table>
 
-    <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+    <table style="width: 100%; border-collapse: collapse; margin: 4px 0 2px;">
+        <?php
+        $onlySaleCheck = false;
+        $showGiftcardRemainder = false;
+        foreach ($payments as $payment_id => $payment) {
+            $onlySaleCheck |= ($payment['payment_type'] == lang('Sales.check'));
+            $splitpayment = explode(':', $payment['payment_type']);
+            $showGiftcardRemainder |= ($splitpayment[0] == lang('Sales.giftcard'));
+        ?>
+            <tr>
+                <td style="text-align: left; padding: 1px 2px;"><?= esc($splitpayment[0]) ?> Paid:</td>
+                <td style="text-align: right; padding: 1px 2px;"><?= to_currency(abs((float)$payment['payment_amount'])) ?></td>
+            </tr>
+        <?php } ?>
 
-    <div id="sale_return_policy" style="text-align: center;">
-        <?= nl2br(esc($config['return_policy'])) ?>
+        <?php if (isset($cur_giftcard_value) && $showGiftcardRemainder) { ?>
+            <tr>
+                <td style="text-align: left; padding: 1px 2px;"><?= lang('Sales.giftcard_balance') ?>:</td>
+                <td style="text-align: right; padding: 1px 2px;"><?= to_currency($cur_giftcard_value) ?></td>
+            </tr>
+        <?php } ?>
+
+        <tr style="font-weight: bold;">
+            <td style="text-align: left; padding: 2px 2px;">
+                <?= lang($amount_change >= 0 ? ($onlySaleCheck ? 'Sales.check_balance' : 'Sales.change_due') : 'Sales.amount_due') ?>:
+            </td>
+            <td style="text-align: right; padding: 2px 2px;">
+                <?= to_currency(abs((float)$amount_change)) ?>
+            </td>
+        </tr>
+    </table>
+
+    <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+    <div style="text-align: center; margin: 2px 0;">
+        Sales Person: <?= esc($employee) ?>
     </div>
 
-    <div id="barcode" style="text-align: center;">
-        <?= $barcode ?><br>
-        <?= $sale_id ?>
+    <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+    <div style="text-align: center; font-style: italic; margin: 3px 0;">
+        Beamlink,<br>
+        Experience the future now...
     </div>
 
-    <?= view('partial/zimra_receipt_block', ['zimra' => $zimra ?? null]) ?>
+    <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
 
-    <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+    <div id="receipt_terms_summary" style="font-size: 82%; line-height: 1.35; text-align: left; padding: 2px 2px;">
+        <div style="font-weight: bold; text-align: center; margin-bottom: 3px; text-transform: uppercase;">Terms &amp; Conditions</div>
+        <div>&bull; Please check all products &amp; change before leaving the counter.</div>
+        <div>&bull; Tested products will not be accepted if returned not working.</div>
+        <div>&bull; 3 months warranty on appliances (excludes physical/liquid damage, misuse &amp; tampering).</div>
+        <div>&bull; Exchanges within 48hrs with original receipt &amp; packaging. No cash refunds.</div>
+    </div>
 
-    <div style="text-align: center; font-size: 80%; color: #555;">
-        Second Spark Intelligence &copy; 2026 &middot; secondspark.co.zw
+    <?= view('partial/zimra_receipt_block', [
+        'zimra'            => $zimra ?? null,
+        'sale_id'          => $sale_id,
+        'sale_id_num'      => $sale_id_num,
+        'transaction_time' => $transaction_time,
+        'total'            => $total,
+        'employee'         => $employee,
+    ]) ?>
+
+    <?php if (!empty($barcode)) { ?>
+        <div id="barcode" style="text-align: center; margin: 4px 0 2px;">
+            <?= $barcode ?><br>
+            <span style="font-size: 80%;"><?= esc($sale_id) ?></span>
+        </div>
+    <?php } ?>
+
+    <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+    <div style="text-align: center; font-size: 75%; color: #444;">
+        BeamLink POS &middot; secondspark.co.zw
     </div>
 </div>

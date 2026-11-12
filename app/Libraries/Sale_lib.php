@@ -103,6 +103,7 @@ class Sale_lib
 
     private const ALLOWED_INVOICE_TYPES = [
         'invoice',
+        'invoice_default',
         'tax_invoice',
         'custom_invoice',
         'custom_tax_invoice'
@@ -117,6 +118,7 @@ class Sale_lib
     {
         $invoice_types = [];
         $invoice_types['invoice'] = lang('Sales.invoice_type_invoice');
+        $invoice_types['invoice_default'] = 'A4 Tax Invoice / Receipt';
         $invoice_types['tax_invoice'] = lang('Sales.invoice_type_tax_invoice');
         $invoice_types['custom_invoice'] = lang('Sales.invoice_type_custom_invoice');
         $invoice_types['custom_tax_invoice'] = lang('Sales.invoice_type_custom_tax_invoice');

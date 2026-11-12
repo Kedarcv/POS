@@ -132,7 +132,7 @@
         ?>
             <tr>
                 <td colspan="3" style="text-align: right;"><?= esc($splitpayment[0]) ?> </td>
-                <td style="text-align: right;"><?= to_currency($payment['payment_amount'] * -1) ?></td>
+                <td style="text-align: right;"><?= to_currency(abs($payment['payment_amount'])) ?></td>
             </tr>
         <?php } ?>
 
