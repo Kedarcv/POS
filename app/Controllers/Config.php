@@ -1093,7 +1093,7 @@ class Config extends Secure_Controller
      *
      * @return ResponseInterface
      */
-    public function backup_db(): ResponseInterface
+    public function getBackup_db(): ResponseInterface
     {
         $employeeId = session('person_id');
         if (!$this->employee->has_grant('config', $employeeId)) {

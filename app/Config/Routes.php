@@ -40,7 +40,6 @@ $routes->add('reports/inventory_summary/(:any)/(:any)/(:any)', 'Reports::invento
 $routes->add('reports/stock_take', 'Reports::stock_take_input');
 $routes->add('reports/stock_take_sheet', 'Reports::stock_take');
 $routes->add('reports/stock_take_export', 'Reports::stock_take_export');
-$routes->get('config/backup_db', 'Config::backup_db');
 
 $routes->add('reports/detailed_(:any)/(:any)/(:any)/(:any)', 'Reports::Detailed_$1/$2/$3/$4');
 $routes->add('reports/detailed_sales', 'Reports::date_input_sales');
